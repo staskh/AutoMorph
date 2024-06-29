@@ -291,6 +291,7 @@ if __name__ == '__main__':
         logging.info("Neither CUDA nor MPS is available. Using CPU...")
         device = torch.device("cpu")
 
+    device = torch.device("cpu")
     logging.info(f'Using device {device}')
 
     img_size = Define_image_size(args.uniform, args.dataset)
