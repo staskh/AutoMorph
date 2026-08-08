@@ -1,0 +1,10 @@
+stage,images,of_expected
+staged images,32,32
+M0 preprocessed,32,32
+M1 good quality,26,32
+M1 bad quality,6,32
+M2 binary vessel,26,32
+M2 artery/vein,26,32
+M2 disc/cup,26,32
+M3 disc features,0,32
+M3 macular features,26,32

@@ -1,0 +1,7 @@
+feature,bias_%,MAPE_%,pearson_r,spearman_r,verdict
+Fractal_dimension,-1.917583,1.938074,0.938157,0.913846,reliable
+Vessel_density,-20.007751,20.845685,0.939362,0.908376,"rank-usable, biased - calibrate before absolute use"
+Average_width,-12.301882,12.313242,0.788862,0.837949,"rank-usable, biased - calibrate before absolute use"
+Distance_tortuosity,10.560616,25.763751,0.465331,0.642393,"rank-usable, biased - calibrate before absolute use"
+Squared_curvature_tortuosity,28.737334,89.325105,0.09663,0.173333,unreliable - do not use per-image
+Tortuosity_density,-0.498443,3.246001,0.801593,0.790769,reliable

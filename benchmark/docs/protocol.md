@@ -36,7 +36,30 @@ Vessels occupy roughly 2% of the field of view, so **accuracy and specificity ar
 prediction** and carry almost no information. Dice and IoU are the scores worth reading;
 sensitivity says which way the errors fall.
 
-### 3. Wall-clock time
+### 3. Feature agreement
+
+Dice measures pixels; AutoMorph reports morphometry. So the six whole-image features are also
+measured **from the expert annotation**, and compared with the predicted values image by image:
+bias, MAPE, Pearson and Spearman correlation, Bland–Altman limits. Written to
+`benchmark/results/feature_agreement.csv` by `benchmark/analysis.ipynb`.
+
+Comparability is the whole point, so the annotation is put through the identical path M2's output
+takes before M3 measures it — aligned to the pipeline crop, resized to 912, restricted to the field
+of view, `remove_small_objects(30, connectivity=5)` exactly as `filter_frag` applies, skeletonised,
+then measured by the same `retipy.tortuosity_measures.evaluate_window` at window size 912. Only the
+first step differs from what the prediction gets, and it has to: the prediction is born at 912 while
+the annotation is native.
+
+`benchmark/ground_truth_features.py` does this. Two of retipy's conventions are load-bearing and
+easy to break by renaming a directory, so it validates them up front rather than failing later with
+a confusing read error:
+
+* it recovers a skeleton's binary map as `store_path + path.split('_skeleton')[1]`, so `_skeleton`
+  must appear exactly once in the path;
+* it finds `crop_info.csv` as `store_path.split('M2')[0] + 'M0/crop_info.csv'`, so `M2` must appear
+  exactly once.
+
+### 4. Wall-clock time
 
 Per stage, with attempt count and exit status, in `benchmark/results/stage_timings.csv`.
 

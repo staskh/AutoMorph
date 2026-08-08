@@ -132,5 +132,4 @@ Results/*
 .benchmark_data
 .benchmark_run
 .benchmark_smoke
-benchmark/results/logs/
 .DS_Store
