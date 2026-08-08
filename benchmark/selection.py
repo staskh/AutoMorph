@@ -31,6 +31,15 @@ QUALITY_SCORE = 3
 #: The FIVES split the benchmark draws from.
 SPLIT = "test"
 
+#: Images whose ground truth cannot support a verdict, so no benchmark should score them.
+#: ``train_447_G`` and ``train_448_G`` ship annotation PNGs with no vessel pixels at all; Dice would
+#: be 0 against any non-empty prediction. ``train_174_D`` carries ``test_54_D``'s annotation — the
+#: same eye photographed twice — so the mask is offset from this image's vessels and scores ~0.15
+#: against a prediction sitting correctly on them. All three are properties of the source data, not
+#: of anything measured. See :mod:`benchmark.datasets.fives`, which derives the blank ones from the
+#: manifest; they are named here so selection does not depend on a built store.
+UNSCORABLE_KEYS = frozenset({"train_447_G", "train_448_G", "train_174_D"})
+
 MANIFEST_NAME = "manifest.csv"
 ORIGINAL_SUBDIR = "original"
 IMAGES_SUBDIR = "images"
@@ -56,6 +65,7 @@ def select(manifest, per_disease=PER_DISEASE, quality_score=QUALITY_SCORE, split
     :raises ValueError: if a disease group cannot supply ``per_disease`` images.
     """
     eligible = manifest[manifest["quality_score"] == quality_score]
+    eligible = eligible[~eligible["key"].isin(UNSCORABLE_KEYS)]
     if split is not None:
         eligible = eligible[eligible["split"] == split]
 

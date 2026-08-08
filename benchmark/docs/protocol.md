@@ -110,10 +110,25 @@ circle, but only crops the *label* to the bounding box. A little annotation can 
 outside the detected field of view. Those pixels are excluded by the field-of-view restriction, so
 they never become false negatives — there is a test pinning exactly that.
 
-**Downsampling costs thin vessels.** Taking a 2048-scale annotation to 912 loses single-pixel
-vessels. This is a property of the grid the pipeline works in, not of the scoring: the prediction
-is produced at 912 too, so both sides are evaluated at the same scale. It does mean the Dice here
-is not comparable to a FIVES leaderboard number computed at native resolution.
+**Downsampling costs thin vessels, and how you downsample is a choice.** Taking a 2048-scale
+annotation to 912 loses single-pixel vessels. This is a property of the grid the pipeline works in,
+not of the scoring: the prediction is produced at 912 too, so both sides are evaluated at the same
+scale. It does mean the Dice here is not comparable to a FIVES leaderboard number computed at native
+resolution.
+
+`benchmark.geometry.resize_mask` implements both rules and the caller must pick one:
+
+| Rule | Behaviour on a one-pixel vessel at FIVES' 2.21x reduction |
+| --- | --- |
+| `area` | Coverage averaged, kept at **≥ 0.5**. A one-pixel vessel covers ~45% of an output pixel, so it is **deleted** |
+| `nearest` | Point-sampled. The vessel survives, thinned and broken |
+
+Neither is correct in the abstract: `area` is unbiased about area but erases the finest vessels,
+`nearest` keeps them but distorts their width. **The dataset store was built with `area`; scoring
+uses `nearest`** (`evaluate.RESIZE_METHOD`). That difference is why the annotation pixel counts
+recovered during scoring differ slightly from the counts recorded in the store manifest, and it moves
+Dice by a few points. It is one function with an explicit parameter rather than two implementations,
+so the choice is visible instead of inherited.
 
 ### Cross-check
 

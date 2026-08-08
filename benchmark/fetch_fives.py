@@ -1,5 +1,5 @@
 # ABOUTME: Downloads FIVES from figshare and builds the processed 912 store; discards the raw data.
-# ABOUTME: Run: uv run python -m benchmark.fetch_fives  (see docs/benchmark/datasets/fives.md)
+# ABOUTME: Run: uv run python -m benchmark.fetch_fives  (see benchmark/docs/dataset.md)
 
 """Fetch and prepare FIVES.
 
@@ -32,7 +32,7 @@ from skimage.morphology import skeletonize
 from benchmark.datasets import fives
 from benchmark.geometry import evaluation_mask, to_pipeline_frame, to_pipeline_image
 from benchmark.paths import data_root
-from pheno_automorph.preprocess import CANONICAL_SIZE, apply_crop, crop_transform, imread_rgb
+from benchmark.preprocess import CANONICAL_SIZE, apply_crop, crop_transform, imread_rgb
 
 #: sha256 of the figshare archive, recorded when the store was first built.
 ARCHIVE_SHA256 = "be72f9af286b107bcebcc08a9dae7fc55c3fb0959409b689e14c72f9fdc4ad8e"
@@ -121,11 +121,30 @@ def process_record(record: fives.RawRecord, size: int = CANONICAL_SIZE) -> tuple
     return arrays, row
 
 
+def _imwrite(path: Path, image: np.ndarray) -> None:
+    """Write one PNG, refusing to fail quietly.
+
+    ``cv2.imwrite`` returns False rather than raising — on a missing parent directory, for one — so
+    an unchecked call loses an image while the run reports success.
+    """
+    if not cv2.imwrite(str(path), image):
+        raise OSError(f"could not write {path}")
+
+
+def _store_subdirs(directory: Path) -> None:
+    """Create the three output subdirectories of a store."""
+    for subdir in (fives.IMAGES_SUBDIR, fives.VESSEL_SUBDIR, fives.FOV_SUBDIR):
+        (directory / subdir).mkdir(parents=True, exist_ok=True)
+
+
 def _write(arrays: dict, key: str, directory: Path) -> None:
     """Write the three arrays of one record into the store."""
-    cv2.imwrite(str(directory / fives.IMAGES_SUBDIR / f"{key}.png"), cv2.cvtColor(arrays[fives.IMAGES_SUBDIR], cv2.COLOR_RGB2BGR))
+    _imwrite(
+        directory / fives.IMAGES_SUBDIR / f"{key}.png",
+        cv2.cvtColor(arrays[fives.IMAGES_SUBDIR], cv2.COLOR_RGB2BGR),
+    )
     for subdir in (fives.VESSEL_SUBDIR, fives.FOV_SUBDIR):
-        cv2.imwrite(str(directory / subdir / f"{key}.png"), arrays[subdir].astype(np.uint8) * 255)
+        _imwrite(directory / subdir / f"{key}.png", arrays[subdir].astype(np.uint8) * 255)
 
 
 def build_store(
@@ -150,8 +169,7 @@ def build_store(
         records = records[:limit]
     quality = fives.read_quality(raw_root)
 
-    for subdir in (fives.IMAGES_SUBDIR, fives.VESSEL_SUBDIR, fives.FOV_SUBDIR):
-        (directory / subdir).mkdir(parents=True, exist_ok=True)
+    _store_subdirs(directory)
     if keep_originals:
         for subdir in (fives.IMAGES_SUBDIR, fives.VESSEL_SUBDIR):
             (directory / fives.ORIGINAL_SUBDIR / subdir).mkdir(parents=True, exist_ok=True)
@@ -199,6 +217,8 @@ def rebuild_from_originals(
     if not manifest_path.is_file():
         raise FileNotFoundError(f"no manifest at {manifest_path} — nothing to rebuild from")
 
+    _store_subdirs(directory)
+
     previous = pd.read_csv(manifest_path)
     if limit is not None:
         previous = previous.head(limit)
@@ -232,7 +252,9 @@ def rebuild_from_originals(
 def main(argv: list[str] | None = None) -> int:
     """Download, extract, process, then delete the raw data."""
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    parser.add_argument("--data-root", type=Path, default=None, help="override $PHENO_BENCHMARK_DATA")
+    parser.add_argument(
+        "--data-root", type=Path, default=None, help="override $AUTOMORPH_BENCHMARK_DATA"
+    )
     parser.add_argument("--keep-raw", action="store_true", help="keep the archive and extracted originals")
     parser.add_argument(
         "--keep-originals",

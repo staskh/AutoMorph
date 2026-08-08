@@ -9,7 +9,7 @@ import pytest
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 
-from benchmark.selection import DISEASES, SPLIT, select, stage
+from benchmark.selection import DISEASES, SPLIT, UNSCORABLE_KEYS, select, stage
 
 
 def make_manifest(per_disease=20):
@@ -50,6 +50,20 @@ def test_is_deterministic():
 def test_selects_only_from_the_held_out_split():
     chosen = select(make_manifest())
     assert set(chosen["split"]) == {SPLIT}
+
+
+def test_never_selects_an_unscorable_image():
+    """FIVES ships two empty annotations and one that belongs to a different image."""
+    manifest = make_manifest()
+    unscorable = sorted(UNSCORABLE_KEYS)[0]
+    manifest.loc[manifest.index[0], "key"] = unscorable
+    manifest.loc[manifest.index[0], "quality_score"] = 3
+
+    assert unscorable not in set(select(manifest, split=None)["key"])
+
+
+def test_unscorable_keys_names_the_known_fives_problems():
+    assert UNSCORABLE_KEYS == frozenset({"train_447_G", "train_448_G", "train_174_D"})
 
 
 def test_rejects_a_disease_with_too_few_images():

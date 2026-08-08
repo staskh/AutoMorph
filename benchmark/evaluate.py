@@ -29,6 +29,7 @@ import pandas as pd
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "M0_Preprocess"))
 import fundus_prep as prep
 
+from benchmark import geometry
 from benchmark.selection import original_vessel_path
 
 #: The grid the segmentation network and the feature modules work in.
@@ -80,10 +81,16 @@ def scores(counts):
     }
 
 
-def resize_mask(mask, size=PIPELINE_SIZE):
+#: Downsampling rule for ground-truth masks. ``nearest`` keeps single-pixel vessels, thinned and
+#: broken; ``area`` would delete them outright at FIVES' 2.21x reduction, since a one-pixel vessel
+#: covers only ~45% of an output pixel. See :func:`benchmark.geometry.resize_mask` for the trade —
+#: the two rules move Dice by a few points, so this is stated rather than inherited.
+RESIZE_METHOD = "nearest"
+
+
+def resize_mask(mask, size=PIPELINE_SIZE, method=RESIZE_METHOD):
     """Take a binary mask down to ``size`` x ``size`` without turning it grey."""
-    resized = cv2.resize(mask.astype(np.uint8), (size, size), interpolation=cv2.INTER_NEAREST)
-    return resized.astype(bool)
+    return geometry.resize_mask(mask, size, method)
 
 
 def align_annotation(image, annotation):
