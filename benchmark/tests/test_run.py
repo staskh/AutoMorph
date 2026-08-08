@@ -35,6 +35,19 @@ def test_environment_sets_worker_count(tmp_path):
     assert build_environment(tmp_path, device="cpu", num_workers=3)["NUM_WORKERS"] == "3"
 
 
+def test_environment_sets_batch_size(tmp_path):
+    environment = build_environment(tmp_path, device="cpu", num_workers=0, batch_size=4)
+    assert environment["AUTOMORPH_BATCH_SIZE"] == "4"
+
+
+def test_m1_shell_script_honours_the_batch_size(tmp_path):
+    """The value has to reach M1's command line, not just the environment."""
+    script = Path(__file__).resolve().parents[2] / "M1_Retinal_Image_quality_EyePACS" / "test_outside.sh"
+    text = script.read_text()
+    assert "${AUTOMORPH_BATCH_SIZE:-64}" in text
+    assert "--b=${BATCH_SIZE}" in text
+
+
 def test_environment_puts_the_running_interpreter_first_on_path(tmp_path):
     environment = build_environment(tmp_path, device="cpu", num_workers=0)
     assert environment["PATH"].split(os.pathsep)[0] == str(Path(sys.executable).parent)

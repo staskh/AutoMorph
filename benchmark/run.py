@@ -40,6 +40,10 @@ DEFAULT_RUN_ROOT = REPO_ROOT / ".benchmark_run"
 DEFAULT_STORE = REPO_ROOT / ".benchmark_data" / "fives"
 DEFAULT_OUTPUT = REPO_ROOT / "benchmark" / "results"
 
+#: M1's quality ensemble runs eight EfficientNet-B4 models; a smaller batch keeps peak memory
+#: predictable on CPU. Batch size does not change the predictions — every model runs in eval mode.
+DEFAULT_BATCH_SIZE = 8
+
 
 @dataclass(frozen=True)
 class Stage:
@@ -68,7 +72,7 @@ STAGES = [
 ]
 
 
-def build_environment(run_root, device, num_workers):
+def build_environment(run_root, device, num_workers, batch_size=DEFAULT_BATCH_SIZE):
     """The environment every stage runs under.
 
     The running interpreter's directory goes first on PATH because the module shell scripts call
@@ -78,6 +82,7 @@ def build_environment(run_root, device, num_workers):
     environment["AUTOMORPH_DATA"] = str(Path(run_root).resolve())
     environment["AUTOMORPH_DEVICE"] = device
     environment["NUM_WORKERS"] = str(num_workers)
+    environment["AUTOMORPH_BATCH_SIZE"] = str(batch_size)
     environment["PATH"] = os.pathsep.join(
         [str(Path(sys.executable).parent), environment.get("PATH", "")]
     )
@@ -193,6 +198,7 @@ def main(argv=None):
     parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT, help="where results are written")
     parser.add_argument("--device", default="cpu", help="torch device every module is pinned to")
     parser.add_argument("--num-workers", type=int, default=0, help="dataloader workers")
+    parser.add_argument("--batch-size", type=int, default=DEFAULT_BATCH_SIZE, help="M1 batch size")
     parser.add_argument("--per-disease", type=int, default=8)
     parser.add_argument("--quality-score", type=int, default=3)
     parser.add_argument("--split", default="test", help="FIVES split to draw from ('all' for both)")
@@ -213,7 +219,9 @@ def main(argv=None):
         )
         print(f"staged {len(chosen)} images -> {args.run_root}/images")
 
-        environment = build_environment(args.run_root, args.device, args.num_workers)
+        environment = build_environment(
+            args.run_root, args.device, args.num_workers, args.batch_size
+        )
         timings = []
         for index, stage in enumerate(STAGES, start=1):
             print(f"[{index}/{len(STAGES)}] {stage.name} ... ", end="", flush=True)

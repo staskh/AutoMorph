@@ -43,6 +43,7 @@ Full stdout and stderr for every stage, every attempt, lands in `benchmark/resul
 | --- | --- | --- |
 | `--device` | `cpu` | Pins every module via `AUTOMORPH_DEVICE`. `mps` or `cuda:0` to compare |
 | `--num-workers` | `0` | Dataloader workers, via `NUM_WORKERS`. 0 keeps it single-threaded |
+| `--batch-size` | `8` | M1's batch size, via `AUTOMORPH_BATCH_SIZE`. Does not affect predictions |
 | `--per-disease` | `8` | Images per disease. `--per-disease 1` is a fast 4-image smoke test |
 | `--quality-score` | `3` | FIVES quality label required |
 | `--split` | `test` | `all` to draw from train and test together |
