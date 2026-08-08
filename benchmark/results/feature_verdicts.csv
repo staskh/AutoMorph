@@ -1,7 +1,7 @@
-feature,bias_%,MAPE_%,pearson_r,spearman_r,verdict
-Fractal_dimension,-1.917583,1.938074,0.938157,0.913846,reliable
-Vessel_density,-20.007751,20.845685,0.939362,0.908376,"rank-usable, biased - calibrate before absolute use"
-Average_width,-12.301882,12.313242,0.788862,0.837949,"rank-usable, biased - calibrate before absolute use"
-Distance_tortuosity,10.560616,25.763751,0.465331,0.642393,"rank-usable, biased - calibrate before absolute use"
-Squared_curvature_tortuosity,28.737334,89.325105,0.09663,0.173333,unreliable - do not use per-image
-Tortuosity_density,-0.498443,3.246001,0.801593,0.790769,reliable
+feature,rel_bias_%,MAE,MAPE_%,pearson_r,spearman_r,ICC21,gt_IQR_over_median,spread_to_noise,verdict
+Fractal_dimension,-1.917583,0.028254,1.938074,0.938157,0.913846,0.746728,0.025104,1.750852,usable with care
+Vessel_density,-20.007751,0.01664,20.845685,0.939362,0.908376,0.504443,0.125858,2.066953,"rank-usable, biased - calibrate before quoting absolutes"
+Average_width,-12.301882,14.037181,12.313242,0.788862,0.837949,0.353457,0.105366,2.026559,"rank-usable, biased - calibrate before quoting absolutes"
+Distance_tortuosity,10.560616,0.858036,25.763751,0.465331,0.642393,0.44309,0.403565,1.036913,"rank-usable, biased - calibrate before quoting absolutes"
+Squared_curvature_tortuosity,28.737334,16.043707,89.325105,0.09663,0.173333,0.087506,0.737109,0.599383,unusable - no agreement with truth
+Tortuosity_density,-0.498443,0.022239,3.246001,0.801593,0.790769,0.80481,0.114182,2.898933,reliable

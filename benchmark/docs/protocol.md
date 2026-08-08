@@ -36,12 +36,37 @@ Vessels occupy roughly 2% of the field of view, so **accuracy and specificity ar
 prediction** and carry almost no information. Dice and IoU are the scores worth reading;
 sensitivity says which way the errors fall.
 
-### 3. Feature agreement
+### 3. Feature agreement and informational strength
 
 Dice measures pixels; AutoMorph reports morphometry. So the six whole-image features are also
-measured **from the expert annotation**, and compared with the predicted values image by image:
-bias, MAPE, Pearson and Spearman correlation, Bland–Altman limits. Written to
-`benchmark/results/feature_agreement.csv` by `benchmark/analysis.ipynb`.
+measured **from the expert annotation** and compared with the predicted values image by image.
+Written to `benchmark/results/feature_agreement.csv` by `benchmark/analysis.ipynb`; the statistics
+themselves live in `benchmark/agreement.py`, which is unit-tested — ICC against hand-computed ANOVA
+values.
+
+| Statistic | What it adds |
+| --- | --- |
+| `bias`, `rel_bias_%` | Mean signed difference, absolute and as a percentage. Calibratable if stable |
+| `MAE`, `MAPE_%` | Mean absolute error, in the feature's units and as a percentage |
+| `pearson_r` | Linear association — **blind to bias**, a constant offset still scores 1.0 |
+| `spearman_r` | Rank association: what matters if the feature orders patients |
+| `ICC21` | Shrout & Fleiss ICC(2,1): two-way random effects, absolute agreement, single measurement. **Charges for systematic bias**, so it is the honest headline. Bootstrap 95% CI reported |
+| `BA_low`, `BA_high` | Bland–Altman limits, mean difference ± 1.96 SD |
+
+ICC is read with Koo & Li's conventional bands (<0.5 poor, 0.5–0.75 moderate, 0.75–0.9 good, >0.9
+excellent). Those boundaries are conventions, not facts. The **gap between Pearson and ICC is the
+bias**, and on this data it is large for two features — reporting Pearson alone would overstate
+their usability.
+
+**Informational strength** is the other half of the question: a feature must vary between eyes or it
+cannot separate them however precisely it is measured. Reported as `IQR / median` over the ground
+truth — robust, unit-free, and a property of the cohort rather than of the pipeline, so it is
+computed over all 32 annotated images rather than only the 26 that passed the quality gate.
+
+The two halves combine as `spread_to_noise`: ground-truth IQR ÷ SD of the prediction error, with
+systematic bias excluded, since a constant offset does not stop a feature separating two eyes but
+random scatter does. Below about 1 the noise covers the whole interquartile range and the feature
+cannot rank eyes, regardless of how good its error metrics look.
 
 Comparability is the whole point, so the annotation is put through the identical path M2's output
 takes before M3 measures it — aligned to the pipeline crop, resized to 912, restricted to the field

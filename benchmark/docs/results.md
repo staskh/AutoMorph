@@ -93,40 +93,90 @@ Dice measures pixels. What AutoMorph actually reports is morphometry. So the sam
 features were measured from the expert annotation, by the same retipy code, through the same
 post-processing — see [protocol.md](protocol.md) and `benchmark/ground_truth_features.py`.
 
-Predicted vs ground truth, 26 paired images:
+Predicted vs ground truth, 26 paired images, ordered by ICC:
 
-| Feature | bias % | MAPE % | Pearson r | Spearman | Verdict |
-| --- | --- | --- | --- | --- | --- |
-| Fractal_dimension | −1.9 | 1.9 | 0.938 | 0.914 | **reliable** |
-| Tortuosity_density | −0.5 | 3.2 | 0.802 | 0.791 | **reliable** |
-| Vessel_density | −20.0 | 20.8 | 0.939 | 0.908 | biased, rank-usable |
-| Average_width | −12.3 | 12.3 | 0.789 | 0.838 | biased, rank-usable |
-| Distance_tortuosity | +10.6 | 25.8 | 0.465 | 0.642 | weak |
-| Squared_curvature_tortuosity | +28.7 | 89.3 | **0.097** (p=0.64) | 0.173 (p=0.4) | **unreliable** |
+| Feature | bias | rel. bias % | MAE | MAPE % | Pearson | Spearman | **ICC(2,1)** | ICC 95% CI | Reading |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Tortuosity_density | −0.003 | −0.5 | 0.022 | 3.2 | 0.802 | 0.791 | **0.805** | 0.61–0.90 | good |
+| Fractal_dimension | −0.028 | −1.9 | 0.028 | 1.9 | 0.938 | 0.914 | **0.747** | 0.56–0.84 | moderate |
+| Vessel_density | −0.017 | −20.0 | 0.017 | 20.8 | 0.939 | 0.908 | **0.504** | 0.26–0.65 | moderate |
+| Distance_tortuosity | +0.366 | +10.6 | 0.858 | 25.8 | 0.465 | 0.642 | **0.443** | 0.19–0.75 | poor |
+| Average_width | −14.04 | −12.3 | 14.04 | 12.3 | 0.789 | 0.838 | **0.353** | 0.22–0.46 | poor |
+| Squared_curvature_tortuosity | +6.59 | +28.7 | 16.04 | 89.3 | 0.097 | 0.173 | **0.088** | −0.16–0.50 | poor |
 
-Three distinct behaviours, and Dice predicts none of them on its own:
+### ICC(2,1) tells a harsher story than Pearson, and it is the right one
 
-**Robust.** `Fractal_dimension` and `Tortuosity_density` come through a 25%-under-segmentation
-almost intact — under 4% error, negligible bias. Both are normalised, scale-free quantities, so
-losing thin peripheral vessels barely moves them.
+Pearson is deliberately blind to systematic bias: shift every prediction by a constant and it still
+scores 1.0. ICC(2,1) charges for that offset, so the gap between the two columns *is* the bias:
 
-**Biased but order-preserving.** `Vessel_density` runs 20% low and `Average_width` 12% low, while
-correlating with truth at r ≈ 0.94 and 0.79. The bias is the under-segmentation showing up directly
-— a −20% density against a 0.747 sensitivity is the same fact stated twice. These are usable to
-rank or stratify, and need calibration before any absolute value is quoted. The Bland–Altman limits
-for `Vessel_density` (−0.027, −0.007) exclude zero entirely: the offset is systematic, not noise.
+| Feature | Pearson | ICC(2,1) | gap | rel. bias % |
+| --- | --- | --- | --- | --- |
+| Average_width | 0.789 | 0.353 | **0.436** | −12.3 |
+| Vessel_density | 0.939 | 0.504 | **0.435** | −20.0 |
+| Fractal_dimension | 0.938 | 0.747 | 0.191 | −1.9 |
+| Tortuosity_density | 0.802 | 0.805 | −0.003 | −0.5 |
 
-**Unreliable.** `Squared_curvature_tortuosity` has no detectable relationship with the truth
-(r = 0.097, p = 0.64; Spearman 0.173, p = 0.4) and a median per-image error of 43%. On this data it
-should not be used per image, and its absolute value carries no information about the eye.
-`Distance_tortuosity` is weak rather than dead (r = 0.465, p = 0.017) and ranks better than it
-measures (Spearman 0.642).
+`Average_width` and `Vessel_density` look strong by Pearson (0.79, 0.94) and are only *poor* and
+*moderate* by ICC. They track the truth closely — they are simply offset from it. That distinction
+decides how they may be used: fine for ranking or stratifying, not for quoting an absolute number
+without calibration. `Vessel_density`'s Bland–Altman limits (−0.027, −0.007) exclude zero entirely,
+confirming the offset is systematic rather than noise.
 
-Curvature-based tortuosity is computed from second derivatives along a traced centreline, so it is
-far more sensitive to skeleton noise than an area or box-counting measure — which is consistent with
-being the feature that breaks first.
+Only `Tortuosity_density` reaches *good*, and only it has no bias to charge for.
 
-### Dice is a useful proxy for some features and useless for others
+`Squared_curvature_tortuosity` has no detectable relationship with the truth by any measure
+(Pearson 0.097, p = 0.64; Spearman 0.173, p = 0.4; ICC 0.088 with a CI spanning zero) and a median
+per-image error of 43%. Curvature tortuosity is computed from second derivatives along a traced
+centreline, which is far more sensitive to skeleton noise than an area or box-counting measure — so
+it is unsurprising that this is the feature that breaks first.
+
+## 4. Informational strength — is the feature worth measuring at all?
+
+Agreement is only half the question. A feature must also **vary between eyes**, or it cannot
+separate them however precisely it is measured. `IQR / median` over the ground truth (all 32
+annotated images, since spread is a property of the cohort, not of the pipeline):
+
+| Feature | GT median | GT IQR | **IQR/median** |
+| --- | --- | --- | --- |
+| Squared_curvature_tortuosity | 19.88 | 14.67 | **0.738** |
+| Distance_tortuosity | 3.380 | 1.262 | **0.373** |
+| Average_width | 114.11 | 11.99 | **0.105** |
+| Vessel_density | 0.0845 | 0.0088 | **0.104** |
+| Tortuosity_density | 0.6891 | 0.0699 | **0.101** |
+| Fractal_dimension | 1.4728 | 0.0336 | **0.023** |
+
+**This inverts the picture.** The two tortuosity measures carry by far the most spread — and are the
+two AutoMorph reproduces worst. `Fractal_dimension` is the most accurately reproduced feature and
+has the least to say: its entire interquartile range is 2.3% of its median, so all 32 eyes are
+squeezed into a very narrow band.
+
+### Putting the halves together
+
+`spread_to_noise` = ground-truth IQR ÷ SD of the prediction error, with systematic bias excluded
+(a constant offset does not stop a feature separating two eyes; random scatter does). Below ~1 the
+noise covers the whole interquartile range.
+
+| Feature | IQR/median | spread/noise | ICC | Verdict |
+| --- | --- | --- | --- | --- |
+| Tortuosity_density | 0.114 | **2.90** | 0.805 | **reliable** |
+| Vessel_density | 0.126 | 2.07 | 0.504 | rank-usable, biased — calibrate |
+| Average_width | 0.105 | 2.03 | 0.353 | rank-usable, biased — calibrate |
+| Fractal_dimension | 0.025 | 1.75 | 0.747 | usable with care — very narrow spread |
+| Distance_tortuosity | 0.404 | **1.04** | 0.443 | borderline — noise ≈ spread |
+| Squared_curvature_tortuosity | 0.737 | **0.60** | 0.088 | **unusable** |
+
+`Fractal_dimension`'s low 1.9% error is much less impressive than it looks: because its spread is
+only 2.3%, the error consumes over half the interquartile range. A precise measurement of something
+that barely varies is not a useful measurement.
+
+`Distance_tortuosity` sits at exactly 1.04 — the measurement error is about the size of the
+population spread. It should be treated as borderline, not as the "weak but usable" its Spearman of
+0.64 might suggest.
+
+Only `Tortuosity_density` clears both bars: good ICC, no meaningful bias, and spread comfortably
+wider than its noise.
+
+## 5. Dice is a useful proxy for some features and useless for others
 
 Correlation of Dice with each feature's absolute relative error:
 
@@ -143,6 +193,42 @@ This matters because in production there are no annotations, so Dice is the only
 It works for the density and size features: a high Dice really does mean a trustworthy
 `Vessel_density` or `Fractal_dimension`. It tells you nothing about either tortuosity measure —
 their errors are uncorrelated with segmentation quality, so a good Dice is no reassurance at all.
+
+## Conclusions
+
+1. **The quality gate is the largest single source of data loss** — 6 of 32 clean images, silently,
+   and concentrated in healthy eyes (5 of 8). It costs more images than any downstream failure, and
+   because it runs before segmentation, nothing later can recover them. It deserves attention before
+   any segmentation tuning.
+
+2. **The segmentation under-segments by design, and that bias propagates into the features.** Dice
+   0.832 with sensitivity 0.747 and specificity 0.995 is one fact; `Vessel_density` −20% and
+   `Average_width` −12% are the same fact seen downstream. Do not cite them as independent
+   corroboration.
+
+3. **Judge features by ICC, not Pearson.** Pearson rates `Vessel_density` at 0.94 and
+   `Average_width` at 0.79; ICC(2,1) rates them 0.50 and 0.35. Both track the truth well and sit
+   offset from it. Reporting Pearson alone would materially overstate their usability.
+
+4. **The features AutoMorph measures best are the ones with least to say.** `Fractal_dimension` has
+   1.9% error but only 2.3% interquartile spread; the two tortuosity measures carry the most spread
+   and are reproduced worst. Accuracy and informativeness are anti-correlated across this feature
+   set, which is the most consequential finding here — a feature table can look excellent on error
+   metrics while carrying little usable signal.
+
+5. **Of the six, one is solid, three need calibration, two should not be used per image.**
+   `Tortuosity_density` clears both bars. `Vessel_density`, `Average_width` and `Fractal_dimension`
+   are rank-usable with caveats. `Distance_tortuosity` is borderline (noise ≈ spread) and
+   `Squared_curvature_tortuosity` is unusable (ICC 0.088, CI spanning zero, noise 1.7× the spread).
+
+6. **Dice cannot be used as a blanket quality signal.** It predicts error for the density and size
+   features (r ≈ −0.73 to −0.96) and is uninformative about all three tortuosity measures
+   (r ≈ −0.05 to −0.19). In production, where no annotation exists, a good Dice tells you nothing
+   about the tortuosity numbers you are reporting.
+
+All six conclusions rest on n=26 (n=32 for spread) from one cohort and one run — see the caveats
+below. They are strong enough to act on as priorities for investigation, not as published
+performance figures.
 
 ## Caveats
 
@@ -190,8 +276,10 @@ Per-image data behind every number above:
 | `benchmark/results/vessel_summary.csv` | Scores per disease and overall |
 | `benchmark/results/completion.csv` | Images surviving each module |
 | `benchmark/results/stage_timings.csv` | Per-stage status and wall clock |
-| `benchmark/results/feature_agreement.csv` | Bias, MAPE, correlations, Bland–Altman limits |
-| `benchmark/results/feature_verdicts.csv` | The verdict table from section 3 |
+| `benchmark/results/feature_agreement.csv` | bias, rel. bias, MAE, MAPE, Pearson, Spearman, ICC(2,1) + CI, Bland–Altman |
+| `benchmark/results/feature_informational_strength.csv` | GT median, IQR, IQR/median |
+| `benchmark/results/feature_verdicts.csv` | The combined verdict table |
+| `benchmark/results/conclusions.txt` | The conclusions, generated from the run |
 | `benchmark/results/selection.csv` | The 32 images and their FIVES labels |
 | `.benchmark_run/Results/M3/Ground_truth_Macular_Features.csv` | Features from the annotations |
 | `benchmark/analysis.ipynb` | The analysis, with plots |

@@ -62,6 +62,13 @@ from scipy import stats
 REPO_ROOT = Path.cwd() if (Path.cwd() / "benchmark").is_dir() else Path.cwd().parent
 sys.path.insert(0, str(REPO_ROOT))
 
+from benchmark.agreement import (
+    agreement_table,
+    discriminability,
+    icc_label,
+    informational_strength,
+)
+
 RESULTS = REPO_ROOT / "benchmark" / "results"
 RUN_RESULTS = REPO_ROOT / ".benchmark_run" / "Results"
 
@@ -183,46 +190,70 @@ print("correlation of Dice with specificity:", round(ok["dice"].corr(ok["specifi
         "markdown",
         """## 3. Feature agreement
 
-For each feature, predicted against ground truth:
+For each feature, predicted against ground truth. Definitions live in `benchmark/agreement.py`,
+which is unit-tested — ICC in particular against hand-computed ANOVA values.
 
-- **bias** — mean signed difference, and the same as a percentage of the truth's mean. A systematic
-  offset. Correctable by calibration if it is stable.
-- **MAPE** — mean absolute percentage error. Per-image reliability.
-- **Pearson r** — linear agreement. **Spearman** — rank agreement, which is what matters if the
-  feature is used to order or stratify patients rather than to report an absolute number.
-- **Bland–Altman limits** — mean difference ± 1.96 SD, the interval containing ~95% of differences.
+- **bias** / **rel_bias_%** — mean signed difference, absolute and as a percentage of the truth's
+  mean. A systematic offset, correctable by calibration if it is stable.
+- **MAE** / **MAPE_%** — mean absolute error, in the feature's own units and as a percentage.
+  Per-image reliability.
+- **Pearson r** — linear association. Deliberately blind to bias: a constant offset still scores
+  1.0. **Spearman** — rank association, which is what matters if the feature orders patients rather
+  than reporting an absolute number.
+- **ICC(2,1)** — intraclass correlation, two-way random effects, absolute agreement, single
+  measurement. Unlike Pearson it *charges for systematic bias*, so it is the honest headline
+  number. Read with Koo & Li's conventional bands: <0.5 poor, 0.5–0.75 moderate, 0.75–0.9 good,
+  >0.9 excellent. Bootstrap 95% intervals are shown because n is small.
+- **Bland–Altman limits** — mean difference ± 1.96 SD, containing ~95% of differences.
 
-A feature can have a large bias and still be useful (rank-preserving), or a small bias and be
-useless (uncorrelated). Both columns are needed.""",
+The gap between Pearson and ICC is the interesting column: where Pearson is high and ICC much
+lower, the prediction tracks the truth but is offset from it.""",
     ),
     (
         "code",
-        """def agreement(frame, features=FEATURES):
-    rows = []
-    for feature in features:
-        pair = frame[[f"{feature}_pred", f"{feature}_gt"]].dropna()
-        prediction, reference = pair[f"{feature}_pred"], pair[f"{feature}_gt"]
-        difference = prediction - reference
-        rows.append(
-            {
-                "feature": feature,
-                "n": len(pair),
-                "gt_mean": reference.mean(),
-                "pred_mean": prediction.mean(),
-                "bias": difference.mean(),
-                "bias_%": 100 * difference.mean() / reference.mean(),
-                "MAPE_%": 100 * (difference.abs() / reference.abs()).mean(),
-                "pearson_r": prediction.corr(reference),
-                "spearman_r": prediction.corr(reference, method="spearman"),
-                "BA_low": difference.mean() - 1.96 * difference.std(),
-                "BA_high": difference.mean() + 1.96 * difference.std(),
-            }
-        )
-    return pd.DataFrame(rows).set_index("feature")
+        """agreement = agreement_table(ok, FEATURES, interval=True)
 
+display(
+    agreement[
+        ["n", "gt_mean", "pred_mean", "bias", "rel_bias_%", "MAE", "MAPE_%",
+         "pearson_r", "spearman_r", "ICC21", "ICC_lo", "ICC_hi", "ICC_reading"]
+    ].round(3)
+)""",
+    ),
+    (
+        "code",
+        """# Where does ICC disagree with Pearson? That gap is exactly the systematic bias.
+gap = pd.DataFrame(
+    {
+        "pearson_r": agreement["pearson_r"],
+        "ICC21": agreement["ICC21"],
+        "pearson_minus_ICC": agreement["pearson_r"] - agreement["ICC21"],
+        "rel_bias_%": agreement["rel_bias_%"],
+    }
+).sort_values("pearson_minus_ICC", ascending=False)
 
-agreement_table = agreement(ok)
-display(agreement_table.round(3))""",
+display(gap.round(3))
+print("A large gap means the prediction tracks the truth but sits offset from it.")""",
+    ),
+    (
+        "code",
+        """fig, ax = plt.subplots(figsize=(8, 4))
+position = np.arange(len(FEATURES))
+
+ax.barh(position + 0.2, agreement.loc[FEATURES, "pearson_r"], height=0.36,
+        label="Pearson r (bias-blind)", color="#8FA8CC")
+ax.barh(position - 0.2, agreement.loc[FEATURES, "ICC21"], height=0.36,
+        label="ICC(2,1) (charges for bias)", color="#4C72B0")
+
+for threshold, name in ((0.9, "excellent"), (0.75, "good"), (0.5, "moderate")):
+    ax.axvline(threshold, color="grey", ls=":", lw=1)
+    ax.text(threshold, len(FEATURES) - 0.4, name, fontsize=7, rotation=90,
+            va="top", ha="right", color="grey")
+
+ax.set(yticks=position, yticklabels=FEATURES, xlabel="agreement", xlim=(0, 1.02),
+       title="Pearson vs ICC(2,1): the gap is systematic bias")
+ax.legend(fontsize=8, loc="lower right")
+fig.tight_layout()""",
     ),
     (
         "code",
@@ -319,37 +350,190 @@ fig.tight_layout()""",
         """for disease in order:
     subset = ok[ok["disease"] == disease]
     print(f"\\n=== {disease}  (n={len(subset)}, mean Dice {subset['dice'].mean():.3f}) ===")
-    display(agreement(subset)[["bias_%", "MAPE_%", "pearson_r", "spearman_r"]].round(3))""",
+    display(
+        agreement_table(subset, FEATURES)[
+            ["rel_bias_%", "MAE", "MAPE_%", "pearson_r", "spearman_r", "ICC21"]
+        ].round(3)
+    )""",
     ),
     (
         "markdown",
-        """## 6. Verdict per feature
+        """## 6. Informational strength of each feature
 
-The table below is generated from the numbers above, not hand-written, so it cannot drift out of
-sync with the data. The thresholds are judgement calls and stated explicitly in the code.""",
+Agreement is only half the question. A feature also has to **vary between eyes**, or it cannot
+separate them however precisely it is measured.
+
+Informational strength here is `IQR / median` over the **ground truth** — a robust, unit-free
+measure of how much spread the feature has in the population. It says nothing about AutoMorph; it
+is a property of the feature and this cohort.
+
+Computed over all 32 annotated images, not just the 26 that passed the quality gate: the spread of
+a feature in the population does not depend on which images the pipeline accepted.""",
     ),
     (
         "code",
-        """def verdict(row):
-    if row["pearson_r"] < 0.4 or row["MAPE_%"] > 50:
-        return "unreliable - do not use per-image"
-    if abs(row["bias_%"]) > 10:
-        return "rank-usable, biased - calibrate before absolute use"
-    if row["MAPE_%"] < 5:
+        """# All 32 images have ground truth — the gate only affects predictions.
+truth_all = truth.copy()
+truth_all.columns = [f"{c}_gt" if c in FEATURES else c for c in truth_all.columns]
+
+strength = informational_strength(truth_all, FEATURES).sort_values(
+    "gt_IQR_over_median", ascending=False
+)
+display(strength.round(4))""",
+    ),
+    (
+        "markdown",
+        """### Spread against noise
+
+The two halves have to be put together. `spread_to_noise` is the ground-truth IQR divided by the
+standard deviation of the prediction error, with systematic bias excluded — a constant offset does
+not stop a feature separating one eye from another, but random scatter does.
+
+Below about 1, the measurement noise covers the feature's whole interquartile range: even a
+"low-error" feature cannot rank eyes if its spread is narrower than its error.""",
+    ),
+    (
+        "code",
+        """combined = discriminability(agreement, informational_strength(ok, FEATURES))
+combined["MAPE_%"] = agreement["MAPE_%"]
+combined["ICC21"] = agreement["ICC21"]
+display(combined.sort_values("spread_to_noise", ascending=False).round(3))""",
+    ),
+    (
+        "code",
+        """fig, ax = plt.subplots(figsize=(6.4, 4.8))
+
+for feature in FEATURES:
+    ax.scatter(combined.loc[feature, "gt_IQR_over_median"] * 100,
+               agreement.loc[feature, "MAPE_%"], s=70, alpha=0.85)
+    ax.annotate(feature.replace("_", " "),
+                (combined.loc[feature, "gt_IQR_over_median"] * 100, agreement.loc[feature, "MAPE_%"]),
+                fontsize=7.5, xytext=(6, 3), textcoords="offset points")
+
+ceiling = max(combined["gt_IQR_over_median"].max() * 100, agreement["MAPE_%"].max()) * 1.15
+ax.plot([0, ceiling], [0, ceiling], "k--", lw=1, alpha=0.5)
+ax.fill_between([0, ceiling], [0, ceiling], ceiling, color="#C44E52", alpha=0.07)
+ax.text(ceiling * 0.35, ceiling * 0.8, "error exceeds spread\\n(feature cannot discriminate)",
+        fontsize=8, color="#C44E52")
+
+ax.set(xlabel="informational strength: ground-truth IQR / median (%)",
+       ylabel="measurement error, MAPE (%)",
+       title="Useful features sit low and to the right")
+fig.tight_layout()""",
+    ),
+    (
+        "markdown",
+        """## 7. Verdict per feature
+
+Generated from the numbers above rather than hand-written, so it cannot drift out of sync with the
+data. The thresholds are judgement calls, stated explicitly in the code so they can be argued with.""",
+    ),
+    (
+        "code",
+        """def verdict(feature):
+    icc = agreement.loc[feature, "ICC21"]
+    spearman = agreement.loc[feature, "spearman_r"]
+    mape = agreement.loc[feature, "MAPE_%"]
+    bias = abs(agreement.loc[feature, "rel_bias_%"])
+    ratio = combined.loc[feature, "spread_to_noise"]
+
+    if icc < 0.5 and spearman < 0.5:
+        return "unusable - no agreement with truth"
+    if ratio < 1.0:
+        return "error covers the population spread - cannot rank eyes"
+    if bias > 10:
+        return "rank-usable, biased - calibrate before quoting absolutes"
+    if mape < 5 and icc >= 0.75:
         return "reliable"
     return "usable with care"
 
 
-verdicts = agreement_table[["bias_%", "MAPE_%", "pearson_r", "spearman_r"]].copy()
-verdicts["verdict"] = agreement_table.apply(verdict, axis=1)
-display(verdicts.round(3).sort_values("pearson_r", ascending=False))""",
+verdicts = pd.DataFrame(
+    {
+        "rel_bias_%": agreement["rel_bias_%"],
+        "MAE": agreement["MAE"],
+        "MAPE_%": agreement["MAPE_%"],
+        "pearson_r": agreement["pearson_r"],
+        "spearman_r": agreement["spearman_r"],
+        "ICC21": agreement["ICC21"],
+        "gt_IQR_over_median": combined["gt_IQR_over_median"],
+        "spread_to_noise": combined["spread_to_noise"],
+    }
+)
+verdicts["verdict"] = [verdict(feature) for feature in verdicts.index]
+display(verdicts.round(3).sort_values("ICC21", ascending=False))""",
+    ),
+    (
+        "markdown",
+        """## 8. Conclusions
+
+Generated from the run below, so the prose cannot drift from the numbers. The narrative reading
+follows in [docs/results.md](docs/results.md).""",
+    ),
+    (
+        "code",
+        """dice_mean = ok["dice"].mean()
+sens_mean = ok["sensitivity"].mean()
+spec_mean = ok["specificity"].mean()
+rejected = (scores["status"] != "ok").sum()
+normal_rejected = int((~gate["reached_segmentation"] & (gate["disease"] == "normal")).sum())
+
+lines = [
+    "SEGMENTATION",
+    f"  Dice {dice_mean:.3f}, sensitivity {sens_mean:.3f}, specificity {spec_mean:.3f} over n={len(ok)}.",
+    f"  The model under-segments: it misses ~{100 * (1 - sens_mean):.0f}% of annotated vessel and",
+    f"  invents almost none. Dice correlates with sensitivity at r={ok['dice'].corr(ok['sensitivity']):.3f},",
+    "  so on this data Dice is largely a restatement of sensitivity.",
+    "",
+    "COMPLETION",
+    f"  The M1 quality gate rejected {rejected} of {len(scores)} FIVES quality-3 images,",
+    f"  {normal_rejected} of them healthy eyes. Rejection is silent and total: no segmentation,",
+    "  no features, no output row. Feature results below are conditioned on the survivors.",
+    "",
+    "FEATURE AGREEMENT",
+]
+
+for feature in verdicts.sort_values("ICC21", ascending=False).index:
+    row = verdicts.loc[feature]
+    lines.append(
+        f"  {feature:30s} ICC={row['ICC21']:5.2f} ({icc_label(row['ICC21']):9s})"
+        f" bias={row['rel_bias_%']:+6.1f}%  MAPE={row['MAPE_%']:5.1f}%"
+        f"  spread/noise={row['spread_to_noise']:4.1f}"
+    )
+    lines.append(f"      -> {row['verdict']}")
+
+proxy = (
+    pd.Series(
+        {
+            feature: ok["dice"].corr(
+                (ok[f"{feature}_pred"] - ok[f"{feature}_gt"]).abs() / ok[f"{feature}_gt"].abs()
+            )
+            for feature in FEATURES
+        }
+    )
+    .sort_values()
+)
+
+lines += [
+    "",
+    "IS DICE A USABLE PROXY?",
+    "  In production there are no annotations, so Dice is the only handle available.",
+    f"  It tracks feature error well for: {', '.join(proxy[proxy < -0.5].index)}",
+    f"  It is uninformative about:       {', '.join(proxy[proxy > -0.3].index)}",
+    "  So a good Dice reassures about the density/size features and says nothing about tortuosity.",
+]
+
+print("\\n".join(lines))""",
     ),
     (
         "code",
         """# Save the tables next to the rest of the benchmark output.
-agreement_table.round(6).to_csv(RESULTS / "feature_agreement.csv")
+agreement.round(6).to_csv(RESULTS / "feature_agreement.csv")
 verdicts.round(6).to_csv(RESULTS / "feature_verdicts.csv")
-print(f"wrote feature_agreement.csv and feature_verdicts.csv to {RESULTS}")""",
+strength.round(6).to_csv(RESULTS / "feature_informational_strength.csv")
+Path(RESULTS / "conclusions.txt").write_text("\\n".join(lines) + "\\n")
+print(f"wrote feature_agreement.csv, feature_verdicts.csv, "
+      f"feature_informational_strength.csv and conclusions.txt to {RESULTS}")""",
     ),
 ]
 

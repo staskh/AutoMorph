@@ -1,0 +1,30 @@
+SEGMENTATION
+  Dice 0.832, sensitivity 0.747, specificity 0.995 over n=26.
+  The model under-segments: it misses ~25% of annotated vessel and
+  invents almost none. Dice correlates with sensitivity at r=0.987,
+  so on this data Dice is largely a restatement of sensitivity.
+
+COMPLETION
+  The M1 quality gate rejected 6 of 32 FIVES quality-3 images,
+  5 of them healthy eyes. Rejection is silent and total: no segmentation,
+  no features, no output row. Feature results below are conditioned on the survivors.
+
+FEATURE AGREEMENT
+  Tortuosity_density             ICC= 0.80 (good     ) bias=  -0.5%  MAPE=  3.2%  spread/noise= 2.9
+      -> reliable
+  Fractal_dimension              ICC= 0.75 (moderate ) bias=  -1.9%  MAPE=  1.9%  spread/noise= 1.8
+      -> usable with care
+  Vessel_density                 ICC= 0.50 (moderate ) bias= -20.0%  MAPE= 20.8%  spread/noise= 2.1
+      -> rank-usable, biased - calibrate before quoting absolutes
+  Distance_tortuosity            ICC= 0.44 (poor     ) bias= +10.6%  MAPE= 25.8%  spread/noise= 1.0
+      -> rank-usable, biased - calibrate before quoting absolutes
+  Average_width                  ICC= 0.35 (poor     ) bias= -12.3%  MAPE= 12.3%  spread/noise= 2.0
+      -> rank-usable, biased - calibrate before quoting absolutes
+  Squared_curvature_tortuosity   ICC= 0.09 (poor     ) bias= +28.7%  MAPE= 89.3%  spread/noise= 0.6
+      -> unusable - no agreement with truth
+
+IS DICE A USABLE PROXY?
+  In production there are no annotations, so Dice is the only handle available.
+  It tracks feature error well for: Vessel_density, Fractal_dimension, Average_width
+  It is uninformative about:       Tortuosity_density, Distance_tortuosity, Squared_curvature_tortuosity
+  So a good Dice reassures about the density/size features and says nothing about tortuosity.

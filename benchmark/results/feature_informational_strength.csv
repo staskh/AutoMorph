@@ -1,0 +1,7 @@
+feature,n,gt_median,gt_IQR,gt_IQR_over_median
+Squared_curvature_tortuosity,32,19.878163,14.668566,0.737924
+Distance_tortuosity,32,3.37987,1.262083,0.373412
+Average_width,32,114.111925,11.989221,0.105065
+Vessel_density,32,0.084525,0.008796,0.10406
+Tortuosity_density,32,0.68907,0.06988,0.101412
+Fractal_dimension,32,1.47284,0.033641,0.022841

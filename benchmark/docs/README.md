@@ -18,9 +18,11 @@ compared against a previous run.
 
 **Headline results** ([full write-up](results.md)): the M1 quality gate rejected 6 of 32 FIVES
 quality-3 images, 5 of them healthy eyes. Segmentation reaches Dice 0.832 and under-segments
-(sensitivity 0.747, specificity 0.995). `Fractal_dimension` and `Tortuosity_density` survive that
-intact; `Vessel_density` runs 20% low but keeps its ordering; `Squared_curvature_tortuosity` has no
-detectable relationship with the truth at all (r = 0.097, p = 0.64).
+(sensitivity 0.747, specificity 0.995). Of the six reported features, only `Tortuosity_density`
+clears both agreement and informativeness (ICC 0.81); `Vessel_density` and `Average_width` track the
+truth but sit 20% and 12% low, so ICC rates them 0.50 and 0.35 where Pearson says 0.94 and 0.79; and
+`Squared_curvature_tortuosity` has no detectable relationship with the truth at all (ICC 0.088).
+The features measured most accurately turn out to be the ones with the least spread to measure.
 
 ## Documents
 
