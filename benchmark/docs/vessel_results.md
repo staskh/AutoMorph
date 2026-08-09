@@ -148,20 +148,34 @@ Unchanged from the full run for spread, since ground truth does not depend on th
 `Distance_tortuosity` has crossed below 1.0 (0.96, from 1.04): on the full cohort its measurement
 error is larger than the population spread it is meant to resolve.
 
-## 5. Conclusions
+## 5. The two runs agree exactly on the images they share
 
-1. **The quality gate costs more than it buys.** It removes 19% of the cohort to gain 0.007 Dice.
-   Four of six rejects segment as well as the median accepted image. It is not random — rejects are
-   genuinely worse (p = 0.025) — but the threshold is set far too aggressively for small cohorts.
-2. **The full run's `normal` Dice was an artefact of the gate.** 0.851 on 3 survivors versus 0.819 on
-   all 8. Any per-disease figure from a gated run inherits the gate's bias.
-3. **The full run's feature agreement was optimistic by 0.03–0.10 ICC.** Survivor bias, now measured
-   rather than suspected.
-4. **Conclusions about *which* features to trust are unchanged.** `Tortuosity_density` alone clears
-   both bars; `Vessel_density` and `Average_width` are biased but rank-usable; the two remaining
-   tortuosity measures fail, and `Distance_tortuosity` now fails on discriminability too.
-5. **Under-segmentation is a property of the model, not of the cohort.** Sensitivity 0.736 across all
-   32 mirrors 0.747 on the gated 26.
+Every difference between this report and [results.md](results.md) comes from *which images were
+included* — nothing else. Checked over the 26 images common to both runs:
+
+| Check | Result |
+| --- | --- |
+| `binary_process`, `binary_skeleton`, `raw_binary` PNGs | byte-identical, 26/26 |
+| TP/FP/FN/TN, Dice, IoU, sensitivity, specificity, accuracy | max difference 0 |
+| `truth_pixels`, `predicted_pixels`, `fov_pixels`, `crop_radius` | max difference 0 |
+| All six predicted features | max difference 0 |
+| All six ground-truth features | max difference 0 |
+| ICC, bias, MAPE restricted to the same 26 | identical to 6 dp |
+| Mean Dice on the 26 | 0.8321 — the full run's figure exactly |
+
+Two things this validates beyond reproducibility:
+
+**`measure_masks` reproduces AutoMorph's own M3 script.** The two runs arrived at identical feature
+values by *different code paths* — the full run through
+`M3_feature_whole_pic/retipy/create_datasets_macular_centred.py`, this run through
+`ground_truth_features.measure_masks`. The inputs were confirmed to be the same masks
+(`binary_process` and `macular_centred_binary_process` are byte-identical for all 26). Since the
+ground-truth features are measured by that same function, the like-for-like comparison underpinning
+the agreement analysis has independent support.
+
+**Batch composition does not affect inference.** 26 images batch as 8/8/8/2 and 32 as 8/8/8/8, so
+most images sat in a differently composed batch. Byte-identical output confirms the ensemble is
+deterministic in eval mode.
 
 ## 6. A timing correction
 
@@ -176,6 +190,24 @@ during the six-hour run rather than anything in the code, but **the cause is not
 The practical consequence: the stage timings in [results.md](results.md) should be treated as upper
 bounds, and the "~6 hours" figure for the full pipeline is probably well above what a clean run
 costs. No accuracy number is affected — only wall clock.
+
+## 7. Conclusions
+
+1. **The quality gate costs more than it buys.** It removes 19% of the cohort to gain 0.007 Dice.
+   Four of six rejects segment as well as the median accepted image. It is not random — rejects are
+   genuinely worse (p = 0.025) — but the threshold is set far too aggressively for small cohorts.
+2. **The full run's `normal` Dice was an artefact of the gate.** 0.851 on 3 survivors versus 0.819 on
+   all 8. Any per-disease figure from a gated run inherits the gate's bias.
+3. **The full run's feature agreement was optimistic by 0.03–0.10 ICC.** Survivor bias, now measured
+   rather than suspected.
+4. **Conclusions about *which* features to trust are unchanged.** `Tortuosity_density` alone clears
+   both bars; `Vessel_density` and `Average_width` are biased but rank-usable; the two remaining
+   tortuosity measures fail, and `Distance_tortuosity` now fails on discriminability too.
+5. **Under-segmentation is a property of the model, not of the cohort.** Sensitivity 0.736 across all
+   32 mirrors 0.747 on the gated 26.
+6. **The two runs are bit-identical on the 26 images they share**, so conclusions 2 and 3 are
+   attributable to the gate alone — not to any difference in how the two runs compute. The
+   comparison is clean.
 
 ## Caveats
 
