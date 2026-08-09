@@ -180,13 +180,42 @@ M0 reads `resolution_information.csv` and multiplies its `res` column by the cro
 microns-per-pixel figure behind every width, diameter, and calibre metric AutoMorph reports.
 
 **FIVES publishes no pixel size.** There is no correct value to write. The benchmark writes
-`0.008` mm/pixel — the placeholder AutoMorph's own README suggests for a Topcon 3D-OCT — uniformly
-across all 32 images.
+`0.008` mm/pixel uniformly across all 32 images — the placeholder AutoMorph's own README suggests
+for a Topcon 3D-OCT. It is inherited, not derived or measured.
 
-Consequently every micron-denominated feature in the results is **nominal**: internally consistent
-and comparable between benchmark images, but not a physical measurement. Dimensionless features
-(fractal dimension, vessel density, tortuosity, cup-to-disc ratio) are unaffected, as are all the
-segmentation scores above, which are computed in pixels.
+### What it actually affects
 
-`benchmark/resolution.py` takes `--resolution` and per-image `--override` if a real figure ever
-becomes available.
+Less than "every micron" suggests. Of the six reported features, `resolution` enters exactly one —
+it appears once in the whole measurement path:
+
+```python
+width = np.sum(vessel_) / np.sum(skeleton) * retina.resolution   # tortuosity_measures.py:73
+```
+
+`Fractal_dimension`, `Vessel_density`, `Distance_tortuosity`, `Squared_curvature_tortuosity` and
+`Tortuosity_density` are dimensionless. Every segmentation score is computed in pixels. So the
+constant reaches `Average_width` (and M3's other calibre metrics, CRAE/CRVE) and nothing else.
+
+**And even there it cancels in every comparison statistic.** Prediction and ground truth are scaled
+by the same per-image `scale_resolution`, so `rel_bias_%`, `MAPE`, Pearson, Spearman, ICC(2,1) and
+`IQR / median` are all invariant to the choice — `Average_width`'s ICC of 0.353 and its −12.3% bias
+would be identical at any resolution. Only the absolute micron value and `MAE` scale linearly.
+
+### Is 0.008 close?
+
+Probably ~10% high, on a geometric estimate that has **not** been confirmed against FIVES'
+acquisition details:
+
+| | mm/pixel | implied mean annotated vessel width |
+| --- | --- | --- |
+| 0.008 (used) | 0.00800 | 115 µm |
+| 50° field of view, 0.29 mm/deg | 0.00720 | 104 µm |
+| 50° field of view, 0.28–0.30 mm/deg | 0.0070–0.0075 | 100–107 µm |
+
+The retina spans ~2014 px after M0's crop. Both figures sit inside the physiologically plausible
+band for retinal vessels (~50–200 µm), so this is weak corroboration that 0.008 is not absurd —
+not grounds to replace it. Note also that no single constant can be right for every image:
+mm-per-degree varies with axial length, making the true value per-eye.
+
+`benchmark/resolution.py` takes `--resolution` and per-image `--override` if a real figure becomes
+available.

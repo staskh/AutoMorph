@@ -28,22 +28,42 @@ The features measured most accurately turn out to be the ones with the least spr
 
 | Document | What it covers |
 | --- | --- |
-| [dataset.md](dataset.md) | FIVES, the prebuilt store, and how the 32 images are chosen |
+| [dataset.md](dataset.md) | FIVES, the store, and how the 32 images are chosen |
 | [protocol.md](protocol.md) | What is measured and how the annotation is aligned to the pipeline |
-| [running.md](running.md) | How to run it, what it writes, and what the knobs do |
-| [results.md](results.md) | The recorded run and what it shows |
+| [running.md](running.md) | How to run the full pipeline benchmark, and what the knobs do |
+| [results.md](results.md) | The recorded full run and what it shows |
+| [vessel_run.md](vessel_run.md) | The vessel-only run: all 32 images, no quality gate |
+| [vessel_results.md](vessel_results.md) | What the vessel-only run shows |
+
+## Two runs
+
+| | [Full run](running.md) | [Vessel-only run](vessel_run.md) |
+| --- | --- | --- |
+| Stages | All 13 | M0 + M2 vessel |
+| Quality gate | Enforced — drops 6 of 32 | Bypassed — all 32 segmented |
+| Time (CPU) | ~6 h | ~2 h |
+| Answers | What the pipeline does end to end | How good segmentation is on *every* image |
+
+They write to separate roots and separate output directories, and are meant to be read together:
+the full run shows what a user actually gets, the vessel-only run shows what the segmentation can do
+when nothing is filtered out first.
 
 ## Quick start
 
 ```bash
-uv run python -m benchmark.run                    # pipeline + segmentation scores  (~6 h on CPU)
+uv run python -m benchmark.run                    # full pipeline + scores          (~6 h on CPU)
 uv run python -m benchmark.ground_truth_features  # measure the annotations         (~1 min)
 uv run python -m benchmark.build_notebook --run   # regenerate the analysis         (~1 min)
+
+uv run python -m benchmark.run_vessel             # vessel only, all 32 images      (~2 h on CPU)
 ```
 
 The first stages the subset, runs every module pinned to the CPU, scores the output and writes
-everything under `benchmark/results/`. The other two add the feature comparison; they need the first
+everything under `benchmark/results/`. The next two add the feature comparison; they need the first
 to have run, and both are cheap to repeat.
+
+The last is independent — its own run root, its own output under `benchmark/results/M2_vessels/` —
+and computes Dice plus both feature sets in one go.
 
 ## Layout
 
@@ -55,6 +75,7 @@ benchmark/
   ground_truth_features.py measure the annotations with the same retipy code M3 uses
   agreement.py             ICC(2,1), bias/MAE/MAPE, informational strength
   run.py                   run every module in order, timed, and score the result
+  run_vessel.py            M0 + M2 vessel only, no quality gate, both feature sets
   build_notebook.py        generate analysis.ipynb (edit here, not the .ipynb)
   analysis.ipynb           Dice and feature-agreement analysis, with plots
 
