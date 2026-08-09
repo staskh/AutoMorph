@@ -131,19 +131,41 @@ not of the scoring: the prediction is produced at 912 too, so both sides are eva
 scale. It does mean the Dice here is not comparable to a FIVES leaderboard number computed at native
 resolution.
 
-`benchmark.geometry.resize_mask` implements both rules and the caller must pick one:
+`benchmark.geometry.resize_mask` implements both rules and the caller must pick one: `area`
+(coverage averaged, kept at ≥ 0.5) or `nearest` (point-sampled).
 
-| Rule | Behaviour on a one-pixel vessel at FIVES' 2.21x reduction |
-| --- | --- |
-| `area` | Coverage averaged, kept at **≥ 0.5**. A one-pixel vessel covers ~45% of an output pixel, so it is **deleted** |
-| `nearest` | Point-sampled. The vessel survives, thinned and broken |
+**Neither is intrinsically the better estimator.** Measured on FIVES they recover the same total
+vessel area — 69,186 (nearest) and 69,213 (area) against an area-preserving expectation of 69,232 —
+and are equally stable to sub-pixel translation (CV 0.054% vs 0.051%). The plausible argument that
+point sampling is noisier because it inspects 1 of the 4.88 native pixels behind each output pixel
+does not survive measurement.
 
-Neither is correct in the abstract: `area` is unbiased about area but erases the finest vessels,
-`nearest` keeps them but distorts their width. **The dataset store was built with `area`; scoring
-uses `nearest`** (`evaluate.RESIZE_METHOD`). That difference is why the annotation pixel counts
-recovered during scoring differ slightly from the counts recorded in the store manifest, and it moves
-Dice by a few points. It is one function with an explicit parameter rather than two implementations,
-so the choice is visible instead of inherited.
+**What distinguishes them is consistency with the image.** M2 feeds the network
+`Image.resize((912, 912))`, and PIL's resize is antialiased — on a FIVES crop it sits 0.090 grey
+levels from `INTER_AREA` and 0.688 from `INTER_NEAREST`. The network is asked *"what dominates this
+cell?"*. Ground truth that answers *"what is at this point?"* compares two sampling models and
+manufactures boundary disagreement unrelated to model quality.
+
+The rule to follow is therefore **match the operator applied to the image**, which here means
+`area`.
+
+| | Dice | Sensitivity |
+| --- | --- | --- |
+| GT via `nearest` (current) | 0.8321 | 0.7474 |
+| GT via `area` | 0.8607 | 0.7731 |
+
+`area` scores higher on 26 of 26 images (mean +0.0286, sd 0.0076). **The store was built with
+`area`; scoring currently uses `nearest`** (`evaluate.RESIZE_METHOD`) — which is why recovered
+annotation counts differ slightly from the manifest, and it means the reported Dice is conservative
+by about 0.03. Switching also changes the ground-truth skeleton and so the feature agreement, most
+sharply for the tortuosity measures (`Tortuosity_density` ICC 0.805 → 0.854, `Distance_tortuosity`
+0.443 → 0.283) — that sensitivity to a preprocessing choice which leaves vessel *area* untouched is
+itself evidence those measures are fragile.
+
+The thin-structure objection to `area` — that a vessel covering under half an output pixel is
+deleted — does not apply here: FIVES annotations average 14 px wide at native, 6.3 px at 912.
+Where it does apply, the answer is not to pick a rule but to stop downsampling ground truth:
+upsample the prediction and score at native resolution.
 
 ### Cross-check
 

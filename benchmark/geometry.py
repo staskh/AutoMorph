@@ -43,15 +43,28 @@ def resize_mask(mask, size=CANONICAL_SIZE, method=DEFAULT_METHOD):
         Averages coverage (``INTER_AREA``) and keeps pixels covered by **at least** half. The
         threshold is inclusive so a structure covering exactly half an output pixel survives; an
         exclusive rule erodes, worst at an exact 2x reduction where many cells land on precisely
-        0.5. A vessel thinner than half an output pixel disappears entirely — at FIVES' 2.21x
-        reduction a single-pixel vessel covers ~45% of an output pixel and is dropped.
+        0.5. A structure thinner than half an output pixel disappears entirely.
     ``nearest``
-        Point-samples. Thin vessels survive, thinned and broken, rather than vanishing.
+        Point-samples. Thin structures survive, thinned and broken, rather than vanishing.
 
-    Neither is "correct": ``area`` is unbiased about area but deletes the finest vessels, ``nearest``
-    keeps them but distorts their width. ``area`` is what the dataset stores were built with, so it
-    is the default here; :mod:`benchmark.evaluate` scores with ``nearest``. What matters is that the
-    choice is stated rather than inherited, because it moves Dice by a few points.
+    **The rule should match the operator applied to the image**, not be chosen on its own merits.
+    M2 feeds the network ``Image.resize((912, 912))``, and PIL's resize is antialiased: measured
+    against a FIVES crop it sits 0.090 grey levels from ``INTER_AREA`` and 0.688 from
+    ``INTER_NEAREST``. The network is therefore asked "what dominates this cell?", so ground truth
+    answering "what is at this point?" compares two different sampling models and manufactures
+    boundary disagreement unrelated to model quality — worth 0.029 Dice on this data.
+
+    Neither rule is intrinsically better as an estimator. Measured on FIVES they recover the same
+    total area (69,186 vs 69,213 against an expectation of 69,232) and are equally stable to
+    sub-pixel translation (CV 0.054% vs 0.051%). Only the consistency argument distinguishes them.
+
+    ``area`` is the default and what the dataset stores were built with;
+    :mod:`benchmark.evaluate` currently scores with ``nearest``, which is why recovered annotation
+    counts differ slightly from the manifest.
+
+    Where thin structures genuinely are at risk — finer annotations, or a larger reduction — the
+    answer is not to pick a rule but to stop downsampling ground truth: upsample the prediction and
+    score at native resolution.
 
     :param mask: binary mask — bool, 0/255 ``uint8``, or float; anything non-zero is foreground.
     :param size: side length of the square output.
