@@ -97,6 +97,28 @@ Everything under `benchmark/results/M2_vessels/`:
 | `feature_discriminability.csv` | Spread against measurement noise |
 | `logs/` | Full stage output |
 
+The notebook adds four more:
+
+| File | Contents |
+| --- | --- |
+| `feature_verdicts.csv` | The combined per-feature verdict |
+| `feature_leverage.csv` | Leave-one-out ICC: which image each result depends on |
+| `dice_as_proxy.csv` | Correlation of Dice with each feature's error |
+| `conclusions.txt` | Conclusions, generated from the run |
+
+## Notebook
+
+```bash
+uv run python -m benchmark.build_notebook --profile vessel --run
+```
+
+Writes `benchmark/analysis_M2_vessels.ipynb`, executed in place. It shares nearly all of its cells
+with the full run's `analysis.ipynb` — both are generated from `build_notebook.py`, with a `Profile`
+supplying the data loading and the one section that genuinely differs: where the gate is enforced,
+the question is what it dropped; here, the question is whether dropping it was right.
+
+Edit `build_notebook.py` and regenerate; editing the `.ipynb` directly loses the change.
+
 ## Options
 
 Same knobs as the full run — `--device`, `--num-workers`, `--batch-size`, `--per-disease`,

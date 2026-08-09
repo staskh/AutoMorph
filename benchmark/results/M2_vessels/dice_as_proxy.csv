@@ -1,0 +1,7 @@
+feature,"corr(dice, |rel err|)","corr(sens, |rel err|)",median_|rel err|_%
+Fractal_dimension,-0.927135,-0.930426,1.690561
+Vessel_density,-0.957227,-0.990052,21.332538
+Average_width,-0.711846,-0.739131,12.415847
+Distance_tortuosity,-0.106841,-0.150546,17.663806
+Squared_curvature_tortuosity,-0.059269,-0.116662,43.317885
+Tortuosity_density,-0.35318,-0.369799,3.601363

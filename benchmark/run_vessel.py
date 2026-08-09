@@ -194,7 +194,8 @@ def main(argv=None):
 
     predicted, truth, paired = measure_both_sides(args.run_root, args.store, selection, output)
 
-    paired = paired.merge(scores[["key", "disease", "status", "dice", "iou", "sensitivity"]], on="key")
+    metrics = ["key", "disease", "status", "dice", "iou", "sensitivity", "specificity", "accuracy"]
+    paired = paired.merge(scores[metrics], on="key")
     paired.to_csv(output / "features_paired.csv", index=False)
 
     scored = paired[paired["status"] == "ok"]

@@ -55,7 +55,8 @@ uv run python -m benchmark.run                    # full pipeline + scores      
 uv run python -m benchmark.ground_truth_features  # measure the annotations         (~1 min)
 uv run python -m benchmark.build_notebook --run   # regenerate the analysis         (~1 min)
 
-uv run python -m benchmark.run_vessel             # vessel only, all 32 images      (~2 h on CPU)
+uv run python -m benchmark.run_vessel             # vessel only, all 32 images      (~20 min on CPU)
+uv run python -m benchmark.build_notebook --profile vessel --run
 ```
 
 The first stages the subset, runs every module pinned to the CPU, scores the output and writes
@@ -76,8 +77,9 @@ benchmark/
   agreement.py             ICC(2,1), bias/MAE/MAPE, informational strength
   run.py                   run every module in order, timed, and score the result
   run_vessel.py            M0 + M2 vessel only, no quality gate, both feature sets
-  build_notebook.py        generate analysis.ipynb (edit here, not the .ipynb)
-  analysis.ipynb           Dice and feature-agreement analysis, with plots
+  build_notebook.py        generate both notebooks (edit here, not the .ipynb)
+  analysis.ipynb           full-run analysis, with plots
+  analysis_M2_vessels.ipynb  vessel-only analysis, incl. grading the quality gate
 
   fetch_fives.py           download and build the FIVES store
   datasets/fives.py        FIVES archive layout, quality labels, store schema

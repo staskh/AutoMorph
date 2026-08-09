@@ -175,7 +175,10 @@ that barely varies is not a useful measurement.
 
 `Distance_tortuosity` sits at exactly 1.04 — the measurement error is about the size of the
 population spread. It should be treated as borderline, not as the "weak but usable" its Spearman of
-0.64 might suggest.
+0.64 might suggest. Its ICC is also the least stable here: leave-one-out *raises* it from 0.443 to
+0.623 without `test_105_G` (`feature_leverage.csv`), so the "poor" rating is softer than the point
+estimate implies — though borderline either way on spread/noise. On all 32 images it drops to 0.96,
+below the threshold entirely (see [vessel_results.md](vessel_results.md)).
 
 Only `Tortuosity_density` clears both bars: good ICC, no meaningful bias, and spread comfortably
 wider than its noise.

@@ -111,6 +111,25 @@ carries the whole correlation. Its ICC confidence interval spans zero (−0.05 t
 **The verdict is unchanged: unusable.** This is a good argument for reporting Spearman and a CI
 beside every ICC; on the point estimate alone this would read as a real improvement.
 
+### Leverage is now checked automatically
+
+Because that case was found by hand, both notebooks now run leave-one-out on every ICC and flag any
+feature a single image moves by more than 0.15 (`feature_leverage.csv`). Verdicts are computed from
+the leave-one-out value, not the headline, so a leverage artefact cannot promote a feature.
+
+| Feature | ICC (all 32) | most influential image | ICC without it | swing | fragile |
+| --- | --- | --- | --- | --- | --- |
+| Fractal_dimension | 0.701 | test_52_D | 0.612 | −0.089 | |
+| Vessel_density | 0.409 | test_52_D | 0.301 | −0.108 | |
+| Average_width | 0.319 | test_16_A | 0.296 | −0.023 | |
+| Distance_tortuosity | 0.412 | test_105_G | 0.544 | +0.132 | |
+| **Squared_curvature_tortuosity** | 0.544 | **test_158_N** | **0.144** | **−0.399** | **yes** |
+| Tortuosity_density | 0.757 | test_67_D | 0.716 | −0.041 | |
+
+Only one feature is leverage-dependent, and it is the one already judged unusable. Note also that
+`Fractal_dimension` and `Vessel_density` both hinge partly on `test_52_D` (swings −0.09 and −0.11) —
+under the 0.15 threshold, but a reminder that n = 32 is small.
+
 ## 4. Informational strength and discriminability
 
 Unchanged from the full run for spread, since ground truth does not depend on the gate:
