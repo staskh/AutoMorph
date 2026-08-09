@@ -131,5 +131,6 @@ dmypy.json
 Results/*
 .benchmark_data
 .benchmark_run
+.benchmark_run_vessel
 .benchmark_smoke
 .DS_Store

@@ -83,25 +83,28 @@ def mask_directories(results_root):
     return parent / SKELETON_SUBDIR, parent / PROCESS_SUBDIR
 
 
-def validate_paths(results_root):
-    """Check the assumptions retipy makes about these paths, before measuring anything.
+def validate_mask_paths(skeleton_dir, process_dir):
+    """Check the assumptions retipy makes about a skeleton/binary-map directory pair.
 
     retipy recovers the binary map from a skeleton path by string surgery, ``split('_skeleton')``,
     and finds ``crop_info.csv`` by ``split('M2')``. Both silently produce a wrong path if the
     enclosing directories happen to contain those substrings, and the resulting error is a confusing
     "cannot read image" much later. Failing here instead.
 
-    :raises ValueError: if the run's location would break either split.
+    :raises ValueError: if either path would break its split.
     """
-    skeleton_dir, process_dir = mask_directories(results_root)
-
-    for path, token in ((skeleton_dir, "_skeleton"), (process_dir, "M2")):
+    for path, token in ((Path(skeleton_dir), "_skeleton"), (Path(process_dir), "M2")):
         occurrences = str(path.resolve()).count(token)
         if occurrences != 1:
             raise ValueError(
                 f"{path} contains {token!r} {occurrences} times; retipy splits on it and needs "
                 f"exactly one. Move the run root somewhere without {token!r} in its path."
             )
+
+
+def validate_paths(results_root):
+    """Check retipy's path assumptions for a run's ground-truth mask directories."""
+    validate_mask_paths(*mask_directories(results_root))
 
 
 def build_mask_pair(image, annotation, size=PIPELINE_SIZE):
@@ -150,16 +153,25 @@ def build_masks(selection, store, results_root, size=PIPELINE_SIZE):
     return written
 
 
-def measure(results_root, config_path=None, size=PIPELINE_SIZE):
-    """Measure every ground-truth mask with retipy, mirroring M3's whole-image script.
+def measure_masks(skeleton_dir, process_dir, config_path=None, size=PIPELINE_SIZE):
+    """Measure a skeleton/binary-map directory pair with retipy, mirroring M3's whole-image script.
 
-    A mask that retipy cannot measure gets -1 in every feature, which is the convention the
-    pipeline itself uses for a failed measurement.
+    Works for any such pair, so the identical code measures the expert annotation and M2's own
+    ``binary_skeleton``/``binary_process`` output. That is what makes predicted and ground-truth
+    features comparable: they are not merely the same formulas, they are the same call.
+
+    A mask that retipy cannot measure gets -1 in every feature, which is the convention the pipeline
+    itself uses for a failed measurement.
+
+    :param skeleton_dir: directory of skeleton PNGs; its path must contain ``_skeleton`` once.
+    :param process_dir: directory of matching binary maps; its path must contain ``M2`` once.
+    :return: one row per mask, with :data:`FEATURE_COLUMNS`.
     """
     from retipy import configuration, retina, tortuosity_measures
 
+    validate_mask_paths(skeleton_dir, process_dir)
     config = configuration.Configuration(str(config_path or RETIPY_ROOT / "resources" / "retipy.config"))
-    skeleton_dir, process_dir = mask_directories(results_root)
+    skeleton_dir, process_dir = Path(skeleton_dir), Path(process_dir)
 
     rows = []
     for skeleton_path in sorted(Path(skeleton_dir).glob("*.png")):
@@ -186,6 +198,11 @@ def measure(results_root, config_path=None, size=PIPELINE_SIZE):
     print()
 
     return pd.DataFrame(rows)
+
+
+def measure(results_root, config_path=None, size=PIPELINE_SIZE):
+    """Measure the ground-truth masks a run built, via :func:`measure_masks`."""
+    return measure_masks(*mask_directories(results_root), config_path, size)
 
 
 def main(argv=None):
