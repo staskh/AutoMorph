@@ -30,6 +30,10 @@ The 6 lost images are the real finding. Every benchmark image is FIVES **quality
 grade — yet M1 rejected 6, and rejection is silent and total: no segmentation, no features, no row
 in the output.
 
+> Segmenting them anyway shows the gate discards 19% of the cohort to gain 0.007 Dice, and that four
+> of the six segment as well as the median accepted image. See
+> [vessel_results.md](vessel_results.md).
+
 ### The rejections are concentrated in the healthy images
 
 | Disease | Selected | Segmented | Rejected |
@@ -242,9 +246,11 @@ performance figures.
   leaderboard number computed at full resolution.
 - **The under-segmentation and the feature bias are one finding, not two.** They should not be
   cited as independent corroboration.
-- **Survivor bias in section 3.** Features are compared only on the 26 images that passed the M1
-  gate. If the gate preferentially rejects harder images, the feature agreement reported here is
-  optimistic relative to the full 32.
+- **Survivor bias in section 3 — now measured, and real.** Features are compared only on the 26
+  images that passed the M1 gate. The [vessel-only run](vessel_results.md) segments all 32 and finds
+  every ICC lower by 0.03–0.10, so the agreement reported here is **optimistic**. The ordering of the
+  features is unchanged. The same applies to the per-disease accuracy above: `normal`'s 0.851 on
+  three survivors becomes 0.819 across all eight.
 
 ## Stage timings
 
@@ -264,7 +270,16 @@ performance figures.
 | **Total** | **20964 (5.82 h)** | |
 
 Artery/vein alone is 61% of the wall clock and is not used by any metric in this report — worth
-skipping if only vessel accuracy is wanted. On a GPU the whole run is minutes.
+skipping if only vessel accuracy is wanted, which is what
+[the vessel-only run](vessel_run.md) does. On a GPU the whole run is minutes.
+
+> **These timings are upper bounds, not the cost of the pipeline.** The
+> [vessel-only run](vessel_results.md) executed the identical M2 vessel stage — same code, device and
+> batch size — at 34s/image against the 232s/image recorded here. The difference is in the inference
+> loop rather than post-processing, and this run's per-batch times were erratic (358, 161, 230
+> s/image) where the later one was stable at 28–45. That points to resource contention or memory
+> pressure over the six-hour run rather than anything in the code, but the cause is not established.
+> A clean run is likely much faster than 5.82 h. No accuracy figure is affected.
 
 ## Files
 
