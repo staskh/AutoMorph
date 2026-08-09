@@ -28,13 +28,28 @@ With TP/FP/FN/TN counted **inside the field of view only**:
 | Specificity | `TN / (TN + FP)` — of the annotated background, how much was left alone |
 | Accuracy | `(TP + TN) / all` |
 
-Restricting to the field of view matters. The pipeline's square is mostly black padding outside
-the circular retina; counting that padding as true negative would push specificity and accuracy
-towards 1 and make them meaningless.
+All four are counted **inside the detected field of view only** — `confusion()` masks the
+prediction, the annotation and the true-negative count by it. The circular retina covers 78.5% of
+the pipeline's square; the remaining 21.5% is black padding the networks never saw, and counting it
+as correctly-classified background would flatter the model for free.
 
-Vessels occupy roughly 2% of the field of view, so **accuracy and specificity are near 1 for any
-prediction** and carry almost no information. Dice and IoU are the scores worth reading;
-sensitivity says which way the errors fall.
+How much that restriction actually changes, measured over the 26 scored images:
+
+| | FOV only | whole square | delta |
+| --- | --- | --- | --- |
+| Dice | 0.8321 | 0.8317 | −0.0003 |
+| Specificity | 0.9947 | 0.9959 | +0.0012 |
+| Accuracy | 0.9693 | 0.9758 | +0.0065 |
+
+**Dice and IoU are almost immune to it, structurally**: neither formula contains a TN term, so
+excluding background can only move them through vessel pixels lying outside the field of view, and
+there are barely any — 36 annotated and 14 predicted per image, against ~69,000 vessel pixels. The
+restriction earns its keep on specificity and accuracy, the two metrics that do count TN.
+
+Separately, and for a different reason: vessels occupy roughly 2% of the field of view, so
+**accuracy and specificity sit near 1 for any prediction** and carry almost no information. That is
+prevalence, not padding — restricting to the field of view does not rescue them. Dice and IoU are
+the scores worth reading; sensitivity says which way the errors fall.
 
 ### 3. Feature agreement and informational strength
 
