@@ -1,5 +1,9 @@
 # Vessel-only run: results
 
+> **Superseded on under-segmentation and `Vessel_density` bias** — see
+> [vessel_threshold.md](vessel_threshold.md). At a binarisation threshold of 0.2 rather than 0.5,
+> Dice rises to 0.855, sensitivity to 0.852, and `Vessel_density`'s -21% bias essentially vanishes.
+
 > **Superseded for the tortuosity features.** `detect_vessel_border` returned vessel pixels in
 > flood-fill order rather than path order, so every tortuosity value below was computed on
 > non-adjacent point pairs. See [tortuosity_fix.md](tortuosity_fix.md): after the fix

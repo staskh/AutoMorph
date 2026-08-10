@@ -168,3 +168,27 @@ def test_reuse_segmentation_reports_missing_crop_info(tmp_path):
     (source / "Results" / "M2" / "binary_vessel" / "binary_process").mkdir(parents=True)
     with pytest.raises(FileNotFoundError, match="crop_info"):
         reuse_segmentation(source, tmp_path / "target")
+
+
+def test_environment_carries_the_vessel_threshold(tmp_path):
+    from benchmark.run import DEFAULT_VESSEL_THRESHOLD, build_environment
+
+    assert DEFAULT_VESSEL_THRESHOLD == 0.5, "the pipeline's own value must remain the default"
+    environment = build_environment(tmp_path, "cpu", 0, 8, vessel_threshold=0.2)
+    assert environment["AUTOMORPH_VESSEL_THRESHOLD"] == "0.2"
+
+
+def test_m2_reads_the_threshold_from_the_environment():
+    """The value has to reach both places M2 binarises, not just the first."""
+    root = Path(__file__).resolve().parents[2]
+    source = (root / "M2_Vessel_seg" / "test_outside_integrated.py").read_text()
+
+    assert "AUTOMORPH_VESSEL_THRESHOLD" in source
+    assert source.count(">=VESSEL_THRESHOLD") == 2, "resize_binary and raw_binary must agree"
+    assert ">=0.5]=1" not in source, "a hardcoded threshold is left somewhere"
+
+
+def test_m2_defaults_to_the_pipelines_own_threshold():
+    root = Path(__file__).resolve().parents[2]
+    source = (root / "M2_Vessel_seg" / "test_outside_integrated.py").read_text()
+    assert "os.getenv('AUTOMORPH_VESSEL_THRESHOLD', 0.5)" in source

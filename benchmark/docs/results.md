@@ -1,5 +1,10 @@
 # Results
 
+> **Superseded on under-segmentation and `Vessel_density` bias.** M2 binarised vessel probability at
+> 0.5; at 0.2 sensitivity rises 0.736 -> 0.852 and `Vessel_density`'s bias falls from -21.4% to -0.04%.
+> See [vessel_threshold.md](vessel_threshold.md). The bias reported below is a thresholding artefact,
+> not a property of the model.
+
 > **Superseded for the tortuosity features.** Every tortuosity number below was computed on
 > non-adjacent point pairs, because `detect_vessel_border` returned vessel pixels in flood-fill order
 > rather than path order — see [tortuosity_fix.md](tortuosity_fix.md). Two conclusions there change:

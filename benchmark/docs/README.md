@@ -35,6 +35,7 @@ The features measured most accurately turn out to be the ones with the least spr
 | [vessel_run.md](vessel_run.md) | The vessel-only run: all 32 images, no quality gate |
 | [vessel_results.md](vessel_results.md) | What the vessel-only run shows |
 | [tortuosity_fix.md](tortuosity_fix.md) | A tracing bug in `detect_vessel_border`, and what fixing it changed |
+| [vessel_threshold.md](vessel_threshold.md) | Binarising at 0.2 instead of 0.5 — the largest single improvement measured |
 
 ## Two runs
 
@@ -82,6 +83,7 @@ benchmark/
   analysis.ipynb           full-run analysis, with plots
   analysis_M2_vessels.ipynb  vessel-only analysis, incl. grading the quality gate
   analysis_M2_vessels_fixed.ipynb  the same after the tortuosity fix, with a before/after section
+  analysis_M2_vessels_thr02.ipynb  the same at binarisation threshold 0.2, with a sweep
 
   fetch_fives.py           download and build the FIVES store
   datasets/fives.py        FIVES archive layout, quality labels, store schema

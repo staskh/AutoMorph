@@ -77,7 +77,7 @@ OBJECT_CONNECTIVITY = 5
 #:
 #: Override per run with ``--min-vessel-length``; see benchmark/docs/tortuosity_fix.md for what the
 #: choice costs and buys.
-MIN_VESSEL_LENGTH = 25
+MIN_VESSEL_LENGTH = 50
 
 FEATURE_COLUMNS = (
     "Fractal_dimension",

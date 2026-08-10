@@ -997,6 +997,164 @@ spread is 0.0024 at a 15-px threshold and 0.0039 at 50 px. The collapse is the o
     ),
 ]
 
+
+THRESHOLD_INTRO = """# AutoMorph on FIVES — vessel probability binarised at 0.2
+
+The same 32 images and the same ensemble as `analysis_M2_vessels_fixed.ipynb`, but M2 calls a pixel
+vessel at a **probability of 0.2 instead of 0.5**. Unlike the tortuosity fix, this changes the
+segmentation itself, so *every* number moves — Dice included.
+
+The motivation was a measured asymmetry: at 0.5 the ensemble reached sensitivity 0.736 against
+specificity 0.995. It was missing about a quarter of the annotated vessel while inventing almost
+nothing, which is what a threshold set too high looks like.
+
+Section 4 is the before-and-after. Both runs use the tortuosity fix and a 50 px minimum vessel
+length, so the threshold is the only difference.
+
+> `Average_width` is in nominal microns: FIVES publishes no pixel size, so the benchmark writes a
+> placeholder 0.008 mm/pixel. Prediction and truth share the same scaling, so every comparison
+> statistic here is unaffected; only the absolute micron value is not physical."""
+
+THRESHOLD_LOAD = """RESULTS = REPO_ROOT / "benchmark" / "results" / "M2_vessels_thr02"
+BASELINE = REPO_ROOT / "benchmark" / "results" / "M2_vessels_fixed"
+FULL_RESULTS = REPO_ROOT / "benchmark" / "results"
+RUN_LABEL = "M0 + M2 vessel only, gate bypassed, tortuosity fix, threshold 0.2"
+GATE_ENFORCED = False
+
+scores = pd.read_csv(RESULTS / "vessel_scores.csv")
+selection = pd.read_csv(RESULTS / "selection.csv")
+paired = pd.read_csv(RESULTS / "features_paired.csv")
+predicted = pd.read_csv(RESULTS / "features_predicted.csv")
+truth = pd.read_csv(RESULTS / "features_ground_truth.csv")
+
+for frame in (predicted, truth):
+    frame[FEATURES] = frame[FEATURES].mask(frame[FEATURES] == -1)
+
+ok = paired[paired["status"] == "ok"]
+order = sorted(ok["disease"].unique())
+truth_all = truth.rename(columns={f: f"{f}_gt" for f in FEATURES})
+
+full_scores_path = FULL_RESULTS / "vessel_scores.csv"
+if full_scores_path.is_file():
+    full_scores = pd.read_csv(full_scores_path)
+    REJECTED_BY_M1 = set(full_scores.loc[full_scores["status"] != "ok", "key"])
+else:
+    REJECTED_BY_M1 = set()
+
+# The 0.5 run, for the before-and-after.
+BASELINE_AVAILABLE = (BASELINE / "features_paired.csv").is_file()
+if BASELINE_AVAILABLE:
+    base_paired = pd.read_csv(BASELINE / "features_paired.csv")
+    base_ok = base_paired[base_paired["status"] == "ok"]
+    base_scores = pd.read_csv(BASELINE / "vessel_scores.csv")
+else:
+    print("threshold-0.5 results not found — the comparison section will be skipped")
+
+SWEEP_PATH = RESULTS / "threshold_sweep.csv"
+
+print(f"{len(selection)} selected, {(scores['status'] == 'ok').sum()} segmented, {len(ok)} paired")
+print(f"threshold-0.5 baseline available: {BASELINE_AVAILABLE}")"""
+
+THRESHOLD_COMPARISON = [
+    (
+        "markdown",
+        """## 4. Threshold 0.5 vs 0.2
+
+This change moves the masks, so unlike the tortuosity fix there is **no control group** — every
+feature is expected to move, and Dice moves too. Both runs share the tortuosity fix and the 50 px
+minimum vessel length.""",
+    ),
+    (
+        "code",
+        """if BASELINE_AVAILABLE:
+    metric_names = ["dice", "iou", "sensitivity", "specificity"]
+    comparison = pd.DataFrame(
+        {
+            "at_0.5": base_scores.query("status == 'ok'")[metric_names].mean(),
+            "at_0.2": scores.query("status == 'ok'")[metric_names].mean(),
+        }
+    )
+    comparison["change"] = comparison["at_0.2"] - comparison["at_0.5"]
+    display(comparison.round(4))
+    print("Lowering the threshold buys sensitivity and pays in specificity;")
+    print("Dice rises because the sensitivity gain is much larger than the specificity loss.")""",
+    ),
+    (
+        "code",
+        """if BASELINE_AVAILABLE:
+    base_agreement = agreement_table(base_ok, FEATURES)
+    delta = pd.DataFrame(
+        {
+            "ICC_at_0.5": base_agreement["ICC21"],
+            "ICC_at_0.2": agreement["ICC21"],
+            "ICC_change": agreement["ICC21"] - base_agreement["ICC21"],
+            "bias%_at_0.5": base_agreement["rel_bias_%"],
+            "bias%_at_0.2": agreement["rel_bias_%"],
+            "MAPE%_at_0.5": base_agreement["MAPE_%"],
+            "MAPE%_at_0.2": agreement["MAPE_%"],
+        }
+    )
+    display(delta.round(3).sort_values("ICC_change", ascending=False))""",
+    ),
+    (
+        "code",
+        """if BASELINE_AVAILABLE:
+    fig, axes = plt.subplots(1, 2, figsize=(13, 4.2))
+    position = np.arange(len(FEATURES))
+    labels = [f.replace("_", " ") for f in FEATURES]
+
+    axes[0].barh(position + 0.2, base_agreement.loc[FEATURES, "ICC21"], height=0.36,
+                 label="threshold 0.5", color="#C44E52")
+    axes[0].barh(position - 0.2, agreement.loc[FEATURES, "ICC21"], height=0.36,
+                 label="threshold 0.2", color="#55A868")
+    for threshold in (0.5, 0.75, 0.9):
+        axes[0].axvline(threshold, color="grey", ls=":", lw=1)
+    axes[0].set(yticks=position, yticklabels=labels, xlabel="ICC(2,1)",
+                title="Agreement with ground truth")
+    axes[0].legend(fontsize=8, loc="lower right")
+
+    axes[1].barh(position + 0.2, base_agreement.loc[FEATURES, "rel_bias_%"].abs(), height=0.36,
+                 label="threshold 0.5", color="#C44E52")
+    axes[1].barh(position - 0.2, agreement.loc[FEATURES, "rel_bias_%"].abs(), height=0.36,
+                 label="threshold 0.2", color="#55A868")
+    axes[1].set(yticks=position, yticklabels=["" for _ in FEATURES], xlabel="|relative bias| (%)",
+                title="Systematic bias")
+    axes[1].legend(fontsize=8)
+    fig.tight_layout()""",
+    ),
+    (
+        "markdown",
+        """### Is 0.2 the right threshold?
+
+M2 saves the averaged sigmoid map (`binary_vessel/resize/`), so the threshold can be swept without
+re-running the network — re-binarise, re-apply `remove_small_objects(30)`, re-score. That makes the
+choice checkable rather than assumed.""",
+    ),
+    (
+        "code",
+        """if SWEEP_PATH.is_file():
+    sweep = pd.read_csv(SWEEP_PATH)
+    display(sweep.round(4))
+
+    fig, ax = plt.subplots(figsize=(6.6, 4.2))
+    ax.plot(sweep["threshold"], sweep["dice"], "o-", label="Dice", color="#4C72B0")
+    ax.plot(sweep["threshold"], sweep["sensitivity"], "s--", label="sensitivity", color="#55A868")
+    ax.plot(sweep["threshold"], sweep["specificity"], "^--", label="specificity", color="#C44E52")
+
+    best = sweep.loc[sweep["dice"].idxmax(), "threshold"]
+    ax.axvline(best, color="k", ls=":", lw=1)
+    ax.annotate(f"best Dice at {best}", (best, sweep["dice"].max()), fontsize=8,
+                xytext=(8, -14), textcoords="offset points")
+    ax.set(xlabel="binarisation threshold", ylabel="score",
+           title="Sweeping the threshold over the saved sigmoid maps")
+    ax.legend(fontsize=8)
+    fig.tight_layout()
+else:
+    print("no sweep on disk; see docs/vessel_threshold.md")""",
+    ),
+]
+
+
 PROFILES = {
     "full": Profile(
         name="full",
@@ -1011,6 +1169,14 @@ PROFILES = {
         intro=VESSEL_INTRO,
         load=VESSEL_LOAD,
         gate_cells=VESSEL_GATE,
+    ),
+    "threshold": Profile(
+        name="threshold",
+        notebook=REPO_ROOT / "benchmark" / "analysis_M2_vessels_thr02.ipynb",
+        intro=THRESHOLD_INTRO,
+        load=THRESHOLD_LOAD,
+        gate_cells=VESSEL_GATE,
+        comparison_cells=THRESHOLD_COMPARISON,
     ),
     "fixed": Profile(
         name="fixed",

@@ -46,7 +46,14 @@ from benchmark import evaluate as evaluation
 from benchmark import ground_truth_features as gtf
 from benchmark import resolution as resolution_table
 from benchmark.agreement import agreement_table, discriminability, informational_strength
-from benchmark.run import REPO_ROOT, Stage, build_environment, count_files, run_stage
+from benchmark.run import (
+    DEFAULT_VESSEL_THRESHOLD,
+    REPO_ROOT,
+    Stage,
+    build_environment,
+    count_files,
+    run_stage,
+)
 from benchmark.selection import load_manifest, select, stage as stage_images
 
 DEFAULT_RUN_ROOT = REPO_ROOT / ".benchmark_run_vessel"
@@ -188,6 +195,13 @@ def main(argv=None):
     parser.add_argument("--resolution", type=float, default=resolution_table.DEFAULT_RESOLUTION_MM)
     parser.add_argument("--attempts", type=int, default=2)
     parser.add_argument(
+        "--vessel-threshold",
+        type=float,
+        default=DEFAULT_VESSEL_THRESHOLD,
+        help="probability above which M2 calls a pixel vessel "
+        f"(default {DEFAULT_VESSEL_THRESHOLD}); requires re-running segmentation",
+    )
+    parser.add_argument(
         "--min-vessel-length",
         type=int,
         default=gtf.MIN_VESSEL_LENGTH,
@@ -235,7 +249,10 @@ def main(argv=None):
         )
         print(f"staged {len(selection)} images -> {args.run_root}/images")
 
-        environment = build_environment(args.run_root, args.device, args.num_workers, args.batch_size)
+        environment = build_environment(
+            args.run_root, args.device, args.num_workers, args.batch_size, args.vessel_threshold
+        )
+        print(f"binarising vessel probability at {args.vessel_threshold}")
         timings = []
         for index, stage in enumerate(STAGES, start=1):
             print(f"[{index}/{len(STAGES)}] {stage.name} ... ", end="", flush=True)

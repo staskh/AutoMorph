@@ -44,6 +44,10 @@ DEFAULT_OUTPUT = REPO_ROOT / "benchmark" / "results"
 #: predictable on CPU. Batch size does not change the predictions — every model runs in eval mode.
 DEFAULT_BATCH_SIZE = 8
 
+#: Probability above which M2 calls a pixel vessel. 0.5 is the pipeline's own value; lowering it
+#: trades specificity for sensitivity.
+DEFAULT_VESSEL_THRESHOLD = 0.5
+
 
 @dataclass(frozen=True)
 class Stage:
@@ -72,7 +76,10 @@ STAGES = [
 ]
 
 
-def build_environment(run_root, device, num_workers, batch_size=DEFAULT_BATCH_SIZE):
+def build_environment(
+    run_root, device, num_workers, batch_size=DEFAULT_BATCH_SIZE,
+    vessel_threshold=DEFAULT_VESSEL_THRESHOLD,
+):
     """The environment every stage runs under.
 
     The running interpreter's directory goes first on PATH because the module shell scripts call
@@ -83,6 +90,7 @@ def build_environment(run_root, device, num_workers, batch_size=DEFAULT_BATCH_SI
     environment["AUTOMORPH_DEVICE"] = device
     environment["NUM_WORKERS"] = str(num_workers)
     environment["AUTOMORPH_BATCH_SIZE"] = str(batch_size)
+    environment["AUTOMORPH_VESSEL_THRESHOLD"] = str(vessel_threshold)
     environment["PATH"] = os.pathsep.join(
         [str(Path(sys.executable).parent), environment.get("PATH", "")]
     )
