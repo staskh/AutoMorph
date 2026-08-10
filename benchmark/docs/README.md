@@ -34,6 +34,7 @@ The features measured most accurately turn out to be the ones with the least spr
 | [results.md](results.md) | The recorded full run and what it shows |
 | [vessel_run.md](vessel_run.md) | The vessel-only run: all 32 images, no quality gate |
 | [vessel_results.md](vessel_results.md) | What the vessel-only run shows |
+| [tortuosity_fix.md](tortuosity_fix.md) | A tracing bug in `detect_vessel_border`, and what fixing it changed |
 
 ## Two runs
 
@@ -80,6 +81,7 @@ benchmark/
   build_notebook.py        generate both notebooks (edit here, not the .ipynb)
   analysis.ipynb           full-run analysis, with plots
   analysis_M2_vessels.ipynb  vessel-only analysis, incl. grading the quality gate
+  analysis_M2_vessels_fixed.ipynb  the same after the tortuosity fix, with a before/after section
 
   fetch_fives.py           download and build the FIVES store
   datasets/fives.py        FIVES archive layout, quality labels, store schema

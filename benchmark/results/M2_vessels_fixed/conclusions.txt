@@ -1,0 +1,30 @@
+RUN: M0 + M2 vessel only, gate bypassed, tortuosity fix applied
+
+SEGMENTATION
+  Dice 0.825, sensitivity 0.736, specificity 0.995 over n=32.
+  The model under-segments: it misses ~26% of annotated vessel and invents almost none.
+  Dice correlates with sensitivity at r=0.987, so here Dice is largely a restatement of sensitivity.
+
+QUALITY GATE
+  Bypassed; all 32 images segmented.
+  The 6 images M1 would have rejected score Dice 0.794 against 0.832 for the rest (Mann-Whitney p=0.025).
+  Discarding them would raise mean Dice by +0.0072 while losing 19% of the cohort.
+
+FEATURE AGREEMENT
+  Distance_tortuosity            ICC= 0.87 (good     ) bias=  -0.1%  MAPE=  0.2%  spread/noise= 1.2
+      -> reliable
+  Fractal_dimension              ICC= 0.70 (moderate ) bias=  -2.0%  MAPE=  2.0%  spread/noise= 1.6
+      -> usable with care
+  Tortuosity_density             ICC= 0.48 (poor     ) bias=  -0.2%  MAPE=  3.0%  spread/noise= 0.8  (leverage-adjusted)
+      -> error covers the population spread - cannot rank eyes
+  Vessel_density                 ICC= 0.41 (poor     ) bias= -21.4%  MAPE= 22.1%  spread/noise= 1.4
+      -> rank-usable, biased - calibrate before quoting absolutes
+  Average_width                  ICC= 0.32 (poor     ) bias= -12.9%  MAPE= 12.9%  spread/noise= 2.0
+      -> rank-usable, biased - calibrate before quoting absolutes
+  Squared_curvature_tortuosity   ICC=-0.03 (poor     ) bias=  -7.1%  MAPE=  6.3%  spread/noise= 0.0
+      -> unusable - no agreement with truth
+
+IS DICE A USABLE PROXY?
+  In production there are no annotations, so Dice is the only handle available.
+  It tracks feature error well for: Vessel_density, Fractal_dimension, Average_width, Tortuosity_density
+  It is uninformative about:       Squared_curvature_tortuosity

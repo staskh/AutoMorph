@@ -1,5 +1,12 @@
 # Vessel-only run: results
 
+> **Superseded for the tortuosity features.** `detect_vessel_border` returned vessel pixels in
+> flood-fill order rather than path order, so every tortuosity value below was computed on
+> non-adjacent point pairs. See [tortuosity_fix.md](tortuosity_fix.md): after the fix
+> `Distance_tortuosity` agreement rises from ICC 0.412 to 0.868, and the tortuosity "informational
+> strength" reported here turns out to be tracing artefact rather than anatomy. Dice, completion, and
+> the three non-tortuosity features are unaffected and stand as written.
+
 All 32 images, quality gate bypassed. Reproduce with `uv run python -m benchmark.run_vessel`.
 See [vessel_run.md](vessel_run.md) for what the run does; [results.md](results.md) is the
 full-pipeline counterpart.

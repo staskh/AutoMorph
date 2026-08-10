@@ -1,5 +1,12 @@
 # Results
 
+> **Superseded for the tortuosity features.** Every tortuosity number below was computed on
+> non-adjacent point pairs, because `detect_vessel_border` returned vessel pixels in flood-fill order
+> rather than path order — see [tortuosity_fix.md](tortuosity_fix.md). Two conclusions there change:
+> `Distance_tortuosity` becomes the second-most-trustworthy feature, and the high "informational
+> strength" credited to the tortuosity measures here was tracing artefact. Dice, completion, and the
+> three non-tortuosity features are unaffected.
+
 One run, 32 FIVES images, CPU only. Reproduce with `uv run python -m benchmark.run`.
 
 | | |
