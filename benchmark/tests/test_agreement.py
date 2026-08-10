@@ -114,3 +114,33 @@ def test_informational_strength_of_a_constant_feature_is_zero():
 def test_informational_strength_of_a_zero_median_is_not_a_crash():
     frame = pd.DataFrame({"width_gt": [-1.0, 0.0, 0.0, 1.0]})
     assert np.isnan(informational_strength(frame, ["width"]).loc["width", "gt_IQR_over_median"])
+
+
+def test_icc_of_a_constant_column_is_nan_not_a_number():
+    """A feature that takes one value for every subject has no ICC — reporting one is float noise."""
+    constant = np.full(20, 0.08944272)
+    assert np.isnan(icc21(constant, constant))
+
+
+def test_icc_of_a_near_constant_column_is_nan():
+    """Constant to float precision counts as constant: the ICC swings wildly on a 1e-15 nudge."""
+    values = np.full(20, 0.08944272)
+    nudged = values.copy()
+    nudged[0] += 1e-15
+    assert np.isnan(icc21(nudged, values))
+
+
+def test_icc_still_reported_for_a_small_but_real_spread():
+    """The guard must not swallow a genuinely narrow feature like Distance_tortuosity."""
+    generator = np.random.default_rng(1)
+    truth = 1.08 + generator.normal(0, 0.004, 40)          # the real spread we measured
+    prediction = truth + generator.normal(0, 0.001, 40)
+    result = icc21(prediction, truth)
+    assert np.isfinite(result)
+    assert result > 0.5
+
+
+def test_agreement_table_reports_nan_icc_for_a_constant_feature():
+    constant = np.full(15, 2.5)
+    frame = pd.DataFrame({"flat_gt": constant, "flat_pred": constant})
+    assert np.isnan(agreement_table(frame, ["flat"]).loc["flat", "ICC21"])

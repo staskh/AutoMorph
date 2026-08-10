@@ -178,12 +178,17 @@ def test_evaluate_window_keeps_its_threshold_parameter():
     assert "len(vessel[0]) >= min_pixels_per_vessel" in source, "the parameter must be honoured"
 
 
-def test_the_benchmark_asks_for_fifty_pixels():
+def test_the_benchmark_sets_its_own_threshold_not_retipy_default():
+    """The value is a tunable; what matters is that the benchmark chooses it deliberately."""
+    import inspect
     import sys as _sys
-    _sys.path.insert(0, REPO_ROOT)
-    from benchmark.ground_truth_features import MIN_VESSEL_LENGTH
 
-    assert MIN_VESSEL_LENGTH == 50
+    _sys.path.insert(0, REPO_ROOT)
+    from benchmark import ground_truth_features as gtf
+
+    assert gtf.MIN_VESSEL_LENGTH > 10, "must be a deliberate choice, not retipy's default"
+    source = inspect.getsource(gtf.measure_masks)
+    assert "min_vessel_length," in source, "the chosen threshold must reach evaluate_window"
 
 
 def test_evaluate_window_aggregates_by_median_not_mean():

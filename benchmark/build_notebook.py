@@ -435,6 +435,10 @@ A feature whose ICC depends on one image is judged on the leave-one-out value, n
     icc = agreement.loc[feature, "ICC21"]
     if leverage.loc[feature, "fragile"]:
         icc = leverage.loc[feature, "ICC_without_it"]        # judge on the robust value
+    if not np.isfinite(icc):
+        # icc21 returns NaN for a feature that is constant across subjects: there is no
+        # between-subject variance for an agreement coefficient to be a ratio of.
+        return "unusable - constant across eyes, no agreement is definable"
     spearman = agreement.loc[feature, "spearman_r"]
     mape = agreement.loc[feature, "MAPE_%"]
     bias = abs(agreement.loc[feature, "rel_bias_%"])

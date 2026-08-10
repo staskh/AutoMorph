@@ -54,6 +54,14 @@ def icc21(first, second):
     if subjects < 2:
         raise ValueError("icc21 needs at least two subjects")
 
+    # A feature that takes one value for every subject has no ICC: the between-subject variance the
+    # coefficient is a ratio of does not exist. Left alone the arithmetic still returns a number,
+    # but it is float noise — a 1e-15 perturbation moves it from 0.60 to 0.17 to 0.0001. Report
+    # NaN so a degenerate feature cannot masquerade as an excellent one.
+    scale = float(np.max(np.abs(matrix))) or 1.0
+    if float(np.ptp(matrix)) <= 1e-9 * scale:
+        return float("nan")
+
     grand_mean = matrix.mean()
     total = ((matrix - grand_mean) ** 2).sum()
     between_subjects = raters * ((matrix.mean(axis=1) - grand_mean) ** 2).sum()

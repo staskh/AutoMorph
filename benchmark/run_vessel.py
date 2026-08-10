@@ -138,7 +138,10 @@ def bypass_quality_gate(run_root):
     return len(images)
 
 
-def measure_both_sides(run_root, store, selection, output, size=evaluation.PIPELINE_SIZE):
+def measure_both_sides(
+    run_root, store, selection, output, size=evaluation.PIPELINE_SIZE,
+    min_vessel_length=gtf.MIN_VESSEL_LENGTH,
+):
     """Measure the six features from the prediction and from the annotation, and pair them.
 
     :return: ``(predicted, truth, paired)`` frames.
@@ -146,12 +149,14 @@ def measure_both_sides(run_root, store, selection, output, size=evaluation.PIPEL
     results = Path(run_root) / "Results"
 
     print("measuring predicted masks")
-    predicted = gtf.measure_masks(*prediction_mask_directories(results), size=size)
+    predicted = gtf.measure_masks(
+        *prediction_mask_directories(results), size=size, min_vessel_length=min_vessel_length
+    )
 
     print("building ground-truth masks")
     gtf.build_masks(selection, store, results, size)
     print("measuring ground-truth masks")
-    truth = gtf.measure(results, size=size)
+    truth = gtf.measure(results, size=size, min_vessel_length=min_vessel_length)
 
     predicted.to_csv(output / "features_predicted.csv", index=False)
     truth.to_csv(output / "features_ground_truth.csv", index=False)
@@ -182,6 +187,13 @@ def main(argv=None):
     parser.add_argument("--split", default="test")
     parser.add_argument("--resolution", type=float, default=resolution_table.DEFAULT_RESOLUTION_MM)
     parser.add_argument("--attempts", type=int, default=2)
+    parser.add_argument(
+        "--min-vessel-length",
+        type=int,
+        default=gtf.MIN_VESSEL_LENGTH,
+        help="shortest vessel a tortuosity measure is computed on, in skeleton pixels "
+        f"(default {gtf.MIN_VESSEL_LENGTH})",
+    )
     parser.add_argument("--skip-pipeline", action="store_true", help="re-score an existing run")
     parser.add_argument(
         "--reuse-segmentation-from",
@@ -243,7 +255,10 @@ def main(argv=None):
     summary = evaluation.summarise(scores)
     summary.to_csv(output / "vessel_summary.csv")
 
-    predicted, truth, paired = measure_both_sides(args.run_root, args.store, selection, output)
+    print(f"measuring tortuosity on vessels of at least {args.min_vessel_length} px")
+    predicted, truth, paired = measure_both_sides(
+        args.run_root, args.store, selection, output, min_vessel_length=args.min_vessel_length
+    )
 
     metrics = ["key", "disease", "status", "dice", "iou", "sensitivity", "specificity", "accuracy"]
     paired = paired.merge(scores[metrics], on="key")

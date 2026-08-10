@@ -74,7 +74,10 @@ OBJECT_CONNECTIVITY = 5
 #: retipy's own default is 10 and the pipeline's M3 scripts pass ``CONFIG.pixels_per_window`` (15).
 #: This is the benchmark's choice, passed explicitly to ``evaluate_window`` — the threshold is a
 #: measurement policy, so it belongs with the caller rather than baked into the library.
-MIN_VESSEL_LENGTH = 50
+#:
+#: Override per run with ``--min-vessel-length``; see benchmark/docs/tortuosity_fix.md for what the
+#: choice costs and buys.
+MIN_VESSEL_LENGTH = 25
 
 FEATURE_COLUMNS = (
     "Fractal_dimension",
@@ -189,7 +192,10 @@ def build_masks(selection, store, results_root, size=PIPELINE_SIZE):
     return written
 
 
-def measure_masks(skeleton_dir, process_dir, config_path=None, size=PIPELINE_SIZE):
+def measure_masks(
+    skeleton_dir, process_dir, config_path=None, size=PIPELINE_SIZE,
+    min_vessel_length=MIN_VESSEL_LENGTH,
+):
     """Measure a skeleton/binary-map directory pair with retipy, mirroring M3's whole-image script.
 
     Works for any such pair, so the identical code measures the expert annotation and M2's own
@@ -220,7 +226,7 @@ def measure_masks(skeleton_dir, process_dir, config_path=None, size=PIPELINE_SIZ
             window = retina.Window(segmented, size, min_pixels=config.pixels_per_window)
             fractal, density, width, distance, squared, density_t = tortuosity_measures.evaluate_window(
                 window,
-                MIN_VESSEL_LENGTH,
+                min_vessel_length,
                 config.sampling_size,
                 config.r_2_threshold,
                 store_path=str(process_dir) + os.sep,
@@ -237,9 +243,9 @@ def measure_masks(skeleton_dir, process_dir, config_path=None, size=PIPELINE_SIZ
     return pd.DataFrame(rows)
 
 
-def measure(results_root, config_path=None, size=PIPELINE_SIZE):
+def measure(results_root, config_path=None, size=PIPELINE_SIZE, min_vessel_length=MIN_VESSEL_LENGTH):
     """Measure the ground-truth masks a run built, via :func:`measure_masks`."""
-    return measure_masks(*mask_directories(results_root), config_path, size)
+    return measure_masks(*mask_directories(results_root), config_path, size, min_vessel_length)
 
 
 def main(argv=None):

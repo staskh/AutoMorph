@@ -120,7 +120,43 @@ correction matters more than the ICC improvement, because it inverts an earlier 
 spread is 0.0024 at a 15-px threshold and 0.0039 at 50 px — the threshold slightly *increases* it.
 The collapse is attributable to the ordering fix alone.
 
-## 6. Net verdict per feature
+## 6. Choosing the threshold: 50 px vs 25 px
+
+Both re-extractions reuse the same masks, so only the threshold differs. The three features that do
+not use vessel tracing are identical at both, as they must be.
+
+| Feature | min px | ICC | MAPE % | Spearman | IQR/median | spread/noise |
+| --- | --- | --- | --- | --- | --- | --- |
+| Distance_tortuosity | **50** | **0.868** good | **0.214** | 0.794 | 0.0039 | **1.22** |
+| | 25 | 0.731 moderate | 0.231 | 0.816 | 0.0030 | 0.91 |
+| Tortuosity_density | **50** | **0.822** good | **2.97** | 0.680 | 0.0368 | **0.84** |
+| | 25 | 0.470 poor | 5.92 | 0.837 | 0.0444 | 0.32 |
+| Squared_curvature_tortuosity | 50 | −0.031 | 6.25 | 0.291 | 0.0000 | 0.00 |
+| | 25 | *undefined* | 0.000 | 0.354 | 0.0000 | — |
+
+**50 px is the better choice.** `Distance_tortuosity` drops from *good* to *moderate* agreement at
+25 px, and its spread-to-noise falls below 1 (0.91), meaning the measurement error covers the
+population spread. `Tortuosity_density` degrades much harder — ICC 0.822 → 0.470 and error doubling
+from 3.0% to 5.9%. Admitting 25–49 px segments adds fragments whose arc-chord ratio is dominated by
+skeletonisation noise, which is exactly what the threshold exists to exclude.
+
+Spearman moves the *other* way for both (0.794 → 0.816 and 0.680 → 0.837), so the shorter threshold
+preserves ranking slightly better while measuring absolute values worse. If a downstream use only
+needs to order eyes, 25 px is defensible; for anything quoting a value, 50 px is clearly better.
+
+### `Squared_curvature_tortuosity` is degenerate at both thresholds
+
+At 25 px it is **exactly constant** — 0.089443 for all 32 images, on both the prediction and the
+ground truth. That produces a MAPE of 0.000%, which reads like perfection and is nothing of the kind:
+there is no variation to agree about.
+
+It also exposed a defect in `benchmark/agreement.py`. On a constant column the ICC arithmetic still
+returns a number, but it is float noise — the same data gave 0.933, 0.596, 0.170 and 0.0001
+depending on perturbations of 1e-15. `icc21` now returns NaN when a column varies by less than one
+part in 10⁹ of its scale, and the verdict logic reports *"constant across eyes, no agreement is
+definable"*. The 0.933 that the first 25 px run printed was that bug, not a result.
+
+## 7. Net verdict per feature
 
 | Feature | Verdict after the fix |
 | --- | --- |
