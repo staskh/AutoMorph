@@ -54,9 +54,16 @@ is kept, so the trace follows the trunk instead of teleporting between branches.
 Result: non-adjacent steps **0.00%**, maximum step exactly √2, and a straight vessel now scores
 exactly 1.0.
 
-**Minimum vessel length 50 px** (`MIN_VESSEL_LENGTH`). Arc-chord ratio and curvature are unstable on
-short fragments: the chord is a few pixels, so a one-pixel wobble moves the ratio a long way, and
-skeletonisation noise dominates the derivative. Shorter segments are counted but not measured.
+**Minimum vessel length 50 px.** Arc-chord ratio and curvature are unstable on short fragments: the
+chord is a few pixels, so a one-pixel wobble moves the ratio a long way, and skeletonisation noise
+dominates the derivative. Shorter segments are counted but not measured.
+
+The threshold stays `evaluate_window`'s existing `min_pixels_per_vessel` parameter, whose retipy
+default remains **10**. It is a measurement policy, so it belongs with the caller: the benchmark
+passes `benchmark.ground_truth_features.MIN_VESSEL_LENGTH = 50`, while the pipeline's own M3 scripts
+keep passing `CONFIG.pixels_per_window` (15) and are unaffected. The one behaviour change for those
+callers is that the comparison is now `>=` rather than `>`, so a 15-pixel segment is included where
+it previously needed 16.
 
 **Median instead of mean** across vessels, so the few short segments whose ratio explodes cannot
 dominate the image's value.

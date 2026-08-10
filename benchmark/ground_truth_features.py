@@ -65,6 +65,17 @@ PROCESS_SUBDIR = "ground_truth_binary_process"
 MIN_OBJECT_SIZE = 30
 OBJECT_CONNECTIVITY = 5
 
+#: Shortest vessel a tortuosity measure is computed on, in skeleton pixels.
+#:
+#: Arc-chord ratio and squared curvature are both unstable on short fragments: the chord spans only a
+#: few pixels, so a one-pixel wobble moves the ratio a long way and skeletonisation noise dominates
+#: the derivative. Segments below this length are counted but not measured.
+#:
+#: retipy's own default is 10 and the pipeline's M3 scripts pass ``CONFIG.pixels_per_window`` (15).
+#: This is the benchmark's choice, passed explicitly to ``evaluate_window`` — the threshold is a
+#: measurement policy, so it belongs with the caller rather than baked into the library.
+MIN_VESSEL_LENGTH = 50
+
 FEATURE_COLUMNS = (
     "Fractal_dimension",
     "Vessel_density",
@@ -209,7 +220,7 @@ def measure_masks(skeleton_dir, process_dir, config_path=None, size=PIPELINE_SIZ
             window = retina.Window(segmented, size, min_pixels=config.pixels_per_window)
             fractal, density, width, distance, squared, density_t = tortuosity_measures.evaluate_window(
                 window,
-                config.pixels_per_window,
+                MIN_VESSEL_LENGTH,
                 config.sampling_size,
                 config.r_2_threshold,
                 store_path=str(process_dir) + os.sep,

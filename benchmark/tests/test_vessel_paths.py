@@ -165,8 +165,23 @@ def test_a_wavy_vessel_has_tortuosity_above_one():
     assert distance_measure_tortuosity(vessels[0][0], vessels[0][1]) > 1.05
 
 
-def test_minimum_vessel_length_is_fifty():
-    from retipy.tortuosity_measures import MIN_VESSEL_LENGTH
+def test_evaluate_window_keeps_its_threshold_parameter():
+    """The threshold is the caller's policy: retipy keeps its own default of 10."""
+    import inspect
+
+    from retipy import tortuosity_measures
+
+    signature = inspect.signature(tortuosity_measures.evaluate_window)
+    assert signature.parameters["min_pixels_per_vessel"].default == 10
+
+    source = inspect.getsource(tortuosity_measures.evaluate_window)
+    assert "len(vessel[0]) >= min_pixels_per_vessel" in source, "the parameter must be honoured"
+
+
+def test_the_benchmark_asks_for_fifty_pixels():
+    import sys as _sys
+    _sys.path.insert(0, REPO_ROOT)
+    from benchmark.ground_truth_features import MIN_VESSEL_LENGTH
 
     assert MIN_VESSEL_LENGTH == 50
 

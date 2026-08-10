@@ -59,14 +59,6 @@ def vessel_density(Z):
     return vessel_total_count/pixel_total_count
 
 
-#: Shortest vessel a tortuosity measure is computed on, in skeleton pixels.
-#:
-#: Arc-chord ratio and squared curvature are both unstable on short fragments: the chord is only a
-#: few pixels, so a one-pixel wobble moves the ratio a long way, and skeletonisation noise dominates
-#: the derivative. Segments below this length are counted but not measured.
-MIN_VESSEL_LENGTH = 50
-
-
 def global_cal(retina):
     vessel_ = retina.vessel_image
     skeleton = retina.np_image
@@ -471,8 +463,9 @@ def evaluate_window(window: Window, min_pixels_per_vessel=10, sampling_size=6, r
             vessel_count_1 += 1
 
             # Only vessels long enough to have a measurable shape. Curvature and arc-chord ratio on
-            # a 15-pixel fragment are noise: the chord is short enough that small wobbles dominate.
-            if len(vessel[0]) >= MIN_VESSEL_LENGTH:
+            # a short fragment are noise: the chord spans a few pixels, so small wobbles dominate.
+            # The caller sets the threshold; benchmark.ground_truth_features passes 50.
+            if len(vessel[0]) >= min_pixels_per_vessel:
                 vessel_count += 1
                 t2_values.append(distance_measure_tortuosity(vessel[0], vessel[1]))
                 t4_values.append(squared_curvature_tortuosity(vessel[0], vessel[1]))
