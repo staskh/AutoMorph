@@ -74,6 +74,43 @@ def prediction_mask_directories(results_root):
     return binary_vessel / "binary_skeleton", binary_vessel / "binary_process"
 
 
+def reuse_segmentation(source_root, run_root):
+    """Copy an existing run's segmentation into ``run_root`` so features can be recomputed.
+
+    Feature extraction depends on the vessel masks and on ``M0/crop_info.csv`` (retipy reads the
+    micron scale from it), and on nothing else the pipeline produces. So a change to a feature
+    *formula* can be evaluated without spending an hour re-running a segmentation that would come
+    out byte-identical anyway.
+
+    The copy is deliberate rather than a symlink or an in-place rerun: the new run root is separate,
+    so the previous results stay readable for a before-and-after comparison.
+
+    :return: how many prediction masks were carried over.
+    :raises FileNotFoundError: if the source run has no segmentation or no crop_info.csv.
+    """
+    source = Path(source_root) / "Results"
+    target = Path(run_root) / "Results"
+
+    crop_info = source / "M0" / "crop_info.csv"
+    masks = source / "M2" / "binary_vessel"
+    if not crop_info.is_file():
+        raise FileNotFoundError(f"no crop_info.csv at {crop_info} — the source run is incomplete")
+    if not (masks / "binary_process").is_dir():
+        raise FileNotFoundError(f"no segmentation at {masks} — nothing to reuse")
+
+    (target / "M0").mkdir(parents=True, exist_ok=True)
+    shutil.copyfile(crop_info, target / "M0" / "crop_info.csv")
+
+    copied = 0
+    for subdir in ("binary_process", "binary_skeleton"):
+        destination = target / "M2" / "binary_vessel" / subdir
+        destination.mkdir(parents=True, exist_ok=True)
+        for png in sorted((masks / subdir).glob("*.png")):
+            shutil.copyfile(png, destination / png.name)
+            copied += subdir == "binary_process"
+    return copied
+
+
 def bypass_quality_gate(run_root):
     """Make M1 a pass-through: every preprocessed image counts as good quality.
 
@@ -146,6 +183,13 @@ def main(argv=None):
     parser.add_argument("--resolution", type=float, default=resolution_table.DEFAULT_RESOLUTION_MM)
     parser.add_argument("--attempts", type=int, default=2)
     parser.add_argument("--skip-pipeline", action="store_true", help="re-score an existing run")
+    parser.add_argument(
+        "--reuse-segmentation-from",
+        type=Path,
+        default=None,
+        help="copy the vessel masks and crop_info.csv from this run root instead of segmenting, "
+        "for evaluating a change to a feature formula without re-running M2",
+    )
     args = parser.parse_args(argv)
 
     if args.run_root.resolve() == (REPO_ROOT / ".benchmark_run").resolve():
@@ -159,7 +203,14 @@ def main(argv=None):
     selection = select(load_manifest(args.store), args.per_disease, args.quality_score, split)
     selection.to_csv(output / "selection.csv", index=False)
 
-    if not args.skip_pipeline:
+    if args.reuse_segmentation_from:
+        gtf.validate_paths(results)
+        if results.exists():
+            shutil.rmtree(results)
+        results.mkdir(parents=True)
+        carried = reuse_segmentation(args.reuse_segmentation_from, args.run_root)
+        print(f"reused {carried} segmentations from {args.reuse_segmentation_from} — not re-running M2")
+    elif not args.skip_pipeline:
         gtf.validate_paths(results)
         if results.exists():
             shutil.rmtree(results)

@@ -111,3 +111,60 @@ def test_prediction_directories_are_where_m2_writes(tmp_path):
     skeleton_dir, process_dir = prediction_mask_directories(results)
     assert skeleton_dir == results / "M2" / "binary_vessel" / "binary_skeleton"
     assert process_dir == results / "M2" / "binary_vessel" / "binary_process"
+
+
+def make_source_run(tmp_path, images=3):
+    """A minimal finished run: crop_info.csv plus prediction masks."""
+    results = tmp_path / "source" / "Results"
+    (results / "M0").mkdir(parents=True)
+    (results / "M0" / "crop_info.csv").write_text("Name,radius,Scale,Scale_resolution\na.png,1,1,1\n")
+    for subdir in ("binary_process", "binary_skeleton"):
+        directory = results / "M2" / "binary_vessel" / subdir
+        directory.mkdir(parents=True)
+        for index in range(images):
+            (directory / f"img_{index}.png").write_bytes(b"x")
+    return tmp_path / "source"
+
+
+def test_reuse_segmentation_carries_masks_and_crop_info(tmp_path):
+    from benchmark.run_vessel import reuse_segmentation
+
+    source = make_source_run(tmp_path)
+    target = tmp_path / "target"
+
+    copied = reuse_segmentation(source, target)
+
+    assert copied == 3
+    assert (target / "Results" / "M0" / "crop_info.csv").is_file()
+    for subdir in ("binary_process", "binary_skeleton"):
+        assert len(list((target / "Results" / "M2" / "binary_vessel" / subdir).glob("*.png"))) == 3
+
+
+def test_reuse_segmentation_does_not_disturb_the_source(tmp_path):
+    from benchmark.run_vessel import reuse_segmentation
+
+    source = make_source_run(tmp_path)
+    before = sorted(p.relative_to(source) for p in source.rglob("*"))
+
+    reuse_segmentation(source, tmp_path / "target")
+
+    assert sorted(p.relative_to(source) for p in source.rglob("*")) == before
+
+
+def test_reuse_segmentation_reports_a_missing_segmentation(tmp_path):
+    from benchmark.run_vessel import reuse_segmentation
+
+    source = tmp_path / "empty"
+    (source / "Results" / "M0").mkdir(parents=True)
+    (source / "Results" / "M0" / "crop_info.csv").write_text("Name\n")
+    with pytest.raises(FileNotFoundError, match="nothing to reuse"):
+        reuse_segmentation(source, tmp_path / "target")
+
+
+def test_reuse_segmentation_reports_missing_crop_info(tmp_path):
+    from benchmark.run_vessel import reuse_segmentation
+
+    source = tmp_path / "nocrop"
+    (source / "Results" / "M2" / "binary_vessel" / "binary_process").mkdir(parents=True)
+    with pytest.raises(FileNotFoundError, match="crop_info"):
+        reuse_segmentation(source, tmp_path / "target")

@@ -59,6 +59,14 @@ def vessel_density(Z):
     return vessel_total_count/pixel_total_count
 
 
+#: Shortest vessel a tortuosity measure is computed on, in skeleton pixels.
+#:
+#: Arc-chord ratio and squared curvature are both unstable on short fragments: the chord is only a
+#: few pixels, so a one-pixel wobble moves the ratio a long way, and skeletonisation noise dominates
+#: the derivative. Segments below this length are counted but not measured.
+MIN_VESSEL_LENGTH = 50
+
+
 def global_cal(retina):
     vessel_ = retina.vessel_image
     skeleton = retina.np_image
@@ -454,31 +462,26 @@ def evaluate_window(window: Window, min_pixels_per_vessel=10, sampling_size=6, r
         w1_list_average = []
         vessel_count_list = []
 
+        # Per-vessel values, aggregated by median. A mean is dominated by the few short segments
+        # whose arc-chord ratio explodes when the chord is a couple of pixels long; the median
+        # describes the typical vessel instead of the worst measurement.
+        t2_values, t4_values, td_values = [], [], []
+
         for vessel in vessels:
             vessel_count_1 += 1
 
-            if len(vessel[0]) > min_pixels_per_vessel:
-                s1=time.time()
+            # Only vessels long enough to have a measurable shape. Curvature and arc-chord ratio on
+            # a 15-pixel fragment are noise: the chord is short enough that small wobbles dominate.
+            if len(vessel[0]) >= MIN_VESSEL_LENGTH:
                 vessel_count += 1
-                
-                s2=time.time()
-                t2 += distance_measure_tortuosity(vessel[0], vessel[1])
-                
-                s4=time.time()
-                t4 += squared_curvature_tortuosity(vessel[0], vessel[1])
-                
-                s5=time.time()
-                td += tortuosity_density(vessel[0], vessel[1])
-                
-                s6=time.time()
-                
+                t2_values.append(distance_measure_tortuosity(vessel[0], vessel[1]))
+                t4_values.append(squared_curvature_tortuosity(vessel[0], vessel[1]))
+                td_values.append(tortuosity_density(vessel[0], vessel[1]))
                 vessel_count_list.append(vessel_count)
-                #tfi += fractal_tortuosity_curve(vessel[0], vessel[1])
-                s7=time.time()
-        
+
         if vessel_count > 0:
-            t2 = t2/vessel_count
-            t4 = t4/vessel_count
-            td = td/vessel_count
-    
+            t2 = float(np.median(t2_values))
+            t4 = float(np.median(t4_values))
+            td = float(np.median(td_values))
+
     return FD_binary,VD_binary,Average_width, t2, t4, td

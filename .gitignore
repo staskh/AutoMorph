@@ -134,3 +134,4 @@ Results/*
 .benchmark_run_vessel
 .benchmark_smoke
 .DS_Store
+.benchmark_run_tortuosity
