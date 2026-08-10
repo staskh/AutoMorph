@@ -83,6 +83,31 @@ def mask_directories(results_root):
     return parent / SKELETON_SUBDIR, parent / PROCESS_SUBDIR
 
 
+def _require_whole_picture_retipy(module):
+    """Refuse to measure with the zone copy of retipy.
+
+    The repository ships two packages both named ``retipy``, under ``M3_feature_zone`` and
+    ``M3_feature_whole_pic``. ``retina.py`` is byte-identical between them, but
+    ``tortuosity_measures.evaluate_window`` is not: the zone copy returns 13 values (it adds
+    CRAE/CRVE, bifurcation counts and per-vessel widths) where the whole-picture copy returns the 6
+    this module unpacks.
+
+    Which one gets imported depends on ``sys.path`` order and on whether anything already imported
+    ``retipy`` in this process. If the zone copy wins, every unpack raises and every feature is
+    silently recorded as -1 — a table of garbage that looks like a measurement failure. Checking the
+    module's own file path turns that into one clear error.
+
+    :raises RuntimeError: if the imported retipy is not the whole-picture copy.
+    """
+    loaded = Path(getattr(module, "__file__", "") or "")
+    if RETIPY_ROOT.resolve() not in loaded.resolve().parents:
+        raise RuntimeError(
+            f"retipy was imported from {loaded}, not from {RETIPY_ROOT}. The zone copy's "
+            "evaluate_window returns 13 values where this module needs 6, so measuring would "
+            "produce -1 for every feature. Ensure nothing imports the zone retipy first."
+        )
+
+
 def validate_mask_paths(skeleton_dir, process_dir):
     """Check the assumptions retipy makes about a skeleton/binary-map directory pair.
 
@@ -169,6 +194,7 @@ def measure_masks(skeleton_dir, process_dir, config_path=None, size=PIPELINE_SIZ
     """
     from retipy import configuration, retina, tortuosity_measures
 
+    _require_whole_picture_retipy(tortuosity_measures)
     validate_mask_paths(skeleton_dir, process_dir)
     config = configuration.Configuration(str(config_path or RETIPY_ROOT / "resources" / "retipy.config"))
     skeleton_dir, process_dir = Path(skeleton_dir), Path(process_dir)

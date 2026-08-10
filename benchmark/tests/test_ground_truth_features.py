@@ -139,3 +139,36 @@ def test_write_mask_pair_writes_readable_255_pngs(tmp_path):
     assert set(np.unique(written)) <= {0, 255}
     assert (written == 255).sum() == processed.sum()
     assert (imread(str(skeleton_dir / "test_11_A.png")) == 255).sum() == skeleton.sum()
+
+
+class FakeModule:
+    def __init__(self, path):
+        self.__file__ = path
+
+
+def test_whole_picture_retipy_is_accepted():
+    from benchmark.ground_truth_features import RETIPY_ROOT, _require_whole_picture_retipy
+
+    _require_whole_picture_retipy(FakeModule(str(RETIPY_ROOT / "retipy" / "tortuosity_measures.py")))
+
+
+def test_zone_retipy_is_refused():
+    """The zone copy's evaluate_window returns 13 values, not 6 — measuring would yield all -1."""
+    from benchmark.ground_truth_features import REPO_ROOT, _require_whole_picture_retipy
+
+    zone = REPO_ROOT / "M3_feature_zone" / "retipy" / "retipy" / "tortuosity_measures.py"
+    with pytest.raises(RuntimeError, match="13 values"):
+        _require_whole_picture_retipy(FakeModule(str(zone)))
+
+
+def test_the_two_retipy_copies_still_differ_as_documented():
+    """If upstream ever unifies them, this guard becomes unnecessary and should be revisited."""
+    from benchmark.ground_truth_features import REPO_ROOT
+
+    zone = (REPO_ROOT / "M3_feature_zone" / "retipy" / "retipy" / "tortuosity_measures.py").read_text()
+    whole = (REPO_ROOT / "M3_feature_whole_pic" / "retipy" / "retipy" / "tortuosity_measures.py").read_text()
+    assert zone != whole, "the two retipy copies are now identical — _require_whole_picture_retipy may be dropped"
+
+    retina_zone = (REPO_ROOT / "M3_feature_zone" / "retipy" / "retipy" / "retina.py").read_text()
+    retina_whole = (REPO_ROOT / "M3_feature_whole_pic" / "retipy" / "retipy" / "retina.py").read_text()
+    assert retina_zone == retina_whole, "retina.py has diverged between the two copies"
