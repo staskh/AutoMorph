@@ -173,9 +173,9 @@ def test_reuse_segmentation_reports_missing_crop_info(tmp_path):
 def test_environment_carries_the_vessel_threshold(tmp_path):
     from benchmark.run import DEFAULT_VESSEL_THRESHOLD, build_environment
 
-    assert DEFAULT_VESSEL_THRESHOLD == 0.5, "the pipeline's own value must remain the default"
-    environment = build_environment(tmp_path, "cpu", 0, 8, vessel_threshold=0.2)
-    assert environment["AUTOMORPH_VESSEL_THRESHOLD"] == "0.2"
+    assert DEFAULT_VESSEL_THRESHOLD == 0.2, "must match M2's own default, or runs disagree silently"
+    environment = build_environment(tmp_path, "cpu", 0, 8, vessel_threshold=0.35)
+    assert environment["AUTOMORPH_VESSEL_THRESHOLD"] == "0.35"
 
 
 def test_m2_reads_the_threshold_from_the_environment():
@@ -188,7 +188,10 @@ def test_m2_reads_the_threshold_from_the_environment():
     assert ">=0.5]=1" not in source, "a hardcoded threshold is left somewhere"
 
 
-def test_m2_defaults_to_the_pipelines_own_threshold():
+def test_m2_and_the_benchmark_agree_on_the_default_threshold():
+    """Two defaults for one quantity is a trap: a plain run.sh and a benchmark run must match."""
+    from benchmark.run import DEFAULT_VESSEL_THRESHOLD
+
     root = Path(__file__).resolve().parents[2]
     source = (root / "M2_Vessel_seg" / "test_outside_integrated.py").read_text()
-    assert "os.getenv('AUTOMORPH_VESSEL_THRESHOLD', 0.5)" in source
+    assert f"os.getenv('AUTOMORPH_VESSEL_THRESHOLD', {DEFAULT_VESSEL_THRESHOLD})" in source

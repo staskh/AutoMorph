@@ -122,9 +122,17 @@ Edit `build_notebook.py` and regenerate; editing the `.ipynb` directly loses the
 ## Options
 
 Same knobs as the full run — `--device`, `--num-workers`, `--batch-size`, `--per-disease`,
-`--quality-score`, `--split`, `--resolution`, `--attempts` — plus `--skip-pipeline` to re-score an
-existing run without recomputing the segmentation, which is the one to use while iterating on the
-analysis.
+`--quality-score`, `--split`, `--resolution`, `--attempts`, `--vessel-threshold` — plus:
+
+| Option | Default | Notes |
+| --- | --- | --- |
+| `--skip-pipeline` | off | Re-score an existing run without recomputing the segmentation |
+| `--reuse-segmentation-from` | none | Copy masks from another run root, for a feature-formula change |
+| `--min-vessel-length` | `50` | Shortest vessel a tortuosity measure is computed on |
+| `--vessel-threshold` | `0.2` | Probability above which M2 calls a pixel vessel; changing it needs re-segmentation |
+
+`--skip-pipeline` and `--reuse-segmentation-from` are the ones to use while iterating on the
+analysis or a feature formula: both avoid the 25-minute segmentation.
 
 Note that `--quality-score` still selects *which* images enter the run, using FIVES' own labels. It
 is the **AutoMorph** quality model that is bypassed, not the dataset's quality filter.

@@ -24,10 +24,16 @@ from automorph_device import select_device
 AUTOMORPH_DATA = os.getenv('AUTOMORPH_DATA','..')
 NUM_WORKERS = int(os.getenv('NUM_WORKERS', 8)) # use num_workers=0 to disable multiprocessing
 
-# Probability above which an averaged ensemble pixel counts as vessel. Lowering it trades
-# specificity for sensitivity, which matters because the ensemble under-segments: it recovers about
-# three quarters of the annotated vessel and invents almost none.
-VESSEL_THRESHOLD = float(os.getenv('AUTOMORPH_VESSEL_THRESHOLD', 0.5))
+# Probability above which an averaged ensemble pixel counts as vessel.
+#
+# 0.2, not the 0.5 you would assume for a sigmoid. At 0.5 this ensemble recovers about three quarters
+# of the expert-annotated vessel while inventing almost none — sensitivity 0.736 against specificity
+# 0.995 on the FIVES benchmark — so 0.5 discards probability mass that is genuinely vessel. Lowering
+# it to 0.2 raises Dice from 0.825 to 0.855 and removes a 21% low bias in vessel density.
+#
+# 0.2 is the Dice optimum over a sweep of the saved sigmoid maps, and the maximum is broad: 0.15 to
+# 0.25 all land within 0.002. See benchmark/docs/vessel_threshold.md.
+VESSEL_THRESHOLD = float(os.getenv('AUTOMORPH_VESSEL_THRESHOLD', 0.2))
 
 def filter_frag(data_path):
     if os.path.isdir(data_path + 'resize_binary/.ipynb_checkpoints'):

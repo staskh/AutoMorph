@@ -44,9 +44,9 @@ DEFAULT_OUTPUT = REPO_ROOT / "benchmark" / "results"
 #: predictable on CPU. Batch size does not change the predictions — every model runs in eval mode.
 DEFAULT_BATCH_SIZE = 8
 
-#: Probability above which M2 calls a pixel vessel. 0.5 is the pipeline's own value; lowering it
-#: trades specificity for sensitivity.
-DEFAULT_VESSEL_THRESHOLD = 0.5
+#: Probability above which M2 calls a pixel vessel, matching the pipeline's own default.
+#: See benchmark/docs/vessel_threshold.md for why it is 0.2 rather than 0.5.
+DEFAULT_VESSEL_THRESHOLD = 0.2
 
 
 @dataclass(frozen=True)
@@ -207,6 +207,12 @@ def main(argv=None):
     parser.add_argument("--device", default="cpu", help="torch device every module is pinned to")
     parser.add_argument("--num-workers", type=int, default=0, help="dataloader workers")
     parser.add_argument("--batch-size", type=int, default=DEFAULT_BATCH_SIZE, help="M1 batch size")
+    parser.add_argument(
+        "--vessel-threshold",
+        type=float,
+        default=DEFAULT_VESSEL_THRESHOLD,
+        help=f"probability above which M2 calls a pixel vessel (default {DEFAULT_VESSEL_THRESHOLD})",
+    )
     parser.add_argument("--per-disease", type=int, default=8)
     parser.add_argument("--quality-score", type=int, default=3)
     parser.add_argument("--split", default="test", help="FIVES split to draw from ('all' for both)")
@@ -228,7 +234,7 @@ def main(argv=None):
         print(f"staged {len(chosen)} images -> {args.run_root}/images")
 
         environment = build_environment(
-            args.run_root, args.device, args.num_workers, args.batch_size
+            args.run_root, args.device, args.num_workers, args.batch_size, args.vessel_threshold
         )
         timings = []
         for index, stage in enumerate(STAGES, start=1):

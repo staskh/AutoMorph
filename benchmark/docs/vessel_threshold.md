@@ -84,8 +84,12 @@ a higher threshold, and one calibrating `Vessel_density` would pick whatever zer
 
 ## How it is configured
 
-`AUTOMORPH_VESSEL_THRESHOLD`, read by `M2_Vessel_seg/test_outside_integrated.py`, **defaults to 0.5**
-— the pipeline's own value — so an ordinary `run.sh` is unchanged. The benchmark passes 0.2 through
+**0.2 is now the pipeline default**, not just the benchmark's choice. `AUTOMORPH_VESSEL_THRESHOLD` in
+`M2_Vessel_seg/test_outside_integrated.py` defaults to 0.2, so an ordinary `run.sh` gets it; set the
+variable to 0.5 to restore the previous behaviour.
+
+`benchmark.run.DEFAULT_VESSEL_THRESHOLD` matches, and a test asserts the two agree — two defaults for
+one quantity would let a plain pipeline run and a benchmark run disagree silently. Both runners take
 `--vessel-threshold`.
 
 The variable is applied at **both** places M2 binarises: `resize_binary` (the 912 grid, which feeds
@@ -94,6 +98,13 @@ moved, because changing one alone would silently desynchronise the two.
 
 Changing it requires re-running segmentation, unlike a feature-formula change — about 25 minutes on
 CPU for 32 images.
+
+> **Results produced before this change are not comparable.** Everything in
+> [results.md](results.md), [vessel_results.md](vessel_results.md) and
+> [tortuosity_fix.md](tortuosity_fix.md), and the stored tables in `benchmark/results/`,
+> `M2_vessels/`, `M2_vessels_fixed/` and `M2_vessels_fixed_25px/`, was produced at 0.5. Re-running
+> any of them now will give different — better — numbers. `M2_vessels_thr02/` is the one set that
+> reflects the new default.
 
 ## What this means for earlier conclusions
 
