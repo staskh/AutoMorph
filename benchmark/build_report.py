@@ -96,6 +96,20 @@ def load():
     return Run(BEFORE, "before"), Run(AFTER, "after")
 
 
+def below_diagonal(run):
+    """Features measured better than they vary: MAPE below ground-truth IQR/median.
+
+    This is what the strength-versus-noise plots draw, so counts quoted alongside them must use it.
+    It is deliberately stricter than ``spread_to_noise`` in the tables, which divides by the error's
+    standard deviation and so forgives a systematic offset; MAPE does not.
+    """
+    return int(sum(
+        run.agreement.loc[feature, "MAPE_%"]
+        < run.discriminability.loc[feature, "gt_IQR_over_median"] * 100
+        for feature in FEATURES
+    ))
+
+
 # --------------------------------------------------------------------------------------------------
 # Figures
 # --------------------------------------------------------------------------------------------------
@@ -247,6 +261,56 @@ def figure_predicted_vs_truth(run, path, colour):
 
     figure.suptitle(f"Predicted vs ground truth — {run.label} fixes "
                     f"(dashed = perfect agreement)", y=0.995)
+    figure.tight_layout()
+    figure.savefig(path)
+    plt.close(figure)
+
+
+def figure_spread_vs_noise_panels(before, after, path):
+    """The notebook's spread-versus-noise scatter, one panel per run on shared axes.
+
+    Same construction as the cell in ``analysis_M2_vessels_thr02.ipynb``: informational strength on
+    x, measurement error on y, the diagonal marking error == spread. Side by side on identical axes
+    so the shift between runs is visible rather than inferred.
+    """
+    figure, axes = plt.subplots(1, 2, figsize=(12.6, 5.4), sharex=True, sharey=True)
+
+    panel_offsets = {
+        "Fractal_dimension": (9, 4),
+        "Vessel_density": (9, 6),
+        "Average_width": (9, -12),
+        "Distance_tortuosity": (9, 4),
+        "Squared_curvature_tortuosity": (9, 5),
+        "Tortuosity_density": (9, -12),
+    }
+
+    values = []
+    for run in (before, after):
+        for feature in FEATURES:
+            values.append(run.discriminability.loc[feature, "gt_IQR_over_median"] * 100)
+            values.append(run.agreement.loc[feature, "MAPE_%"])
+    low, high = min(values) * 0.55, max(values) * 1.9
+
+    for axis, run, colour in ((axes[0], before, BEFORE_COLOUR), (axes[1], after, AFTER_COLOUR)):
+        axis.plot([low, high], [low, high], "k--", lw=1, alpha=0.55)
+        axis.fill_between([low, high], [low, high], high, color=BEFORE_COLOUR, alpha=0.06)
+
+        for feature in FEATURES:
+            x = run.discriminability.loc[feature, "gt_IQR_over_median"] * 100
+            y = run.agreement.loc[feature, "MAPE_%"]
+            axis.scatter(x, y, s=76, color=colour, alpha=0.9, zorder=3)
+            axis.annotate(SHORT[feature], (x, y), fontsize=8.5, xytext=panel_offsets[feature],
+                          textcoords="offset points", zorder=4)
+
+        axis.text(low * 1.6, high * 0.55, "error exceeds spread", fontsize=8.5, color=BEFORE_COLOUR)
+        axis.set(
+            xscale="log", yscale="log", xlim=(low, high), ylim=(low, high),
+            xlabel="ground-truth IQR / median (%)",
+            title=f"{run.label} fixes — {below_diagonal(run)}/6 features below the diagonal",
+        )
+    axes[0].set_ylabel("measurement error: MAPE (%)")
+
+    figure.suptitle("Spread against noise: a feature must vary more than it is mis-measured", y=0.99)
     figure.tight_layout()
     figure.savefig(path)
     plt.close(figure)
@@ -464,8 +528,8 @@ def report(before, after):
     paired_dice = b.ok[["key", "dice"]].merge(a.ok[["key", "dice"]], on="key",
                                               suffixes=("_b", "_a"))
     improved = int((paired_dice["dice_a"] > paired_dice["dice_b"]).sum())
-    usable_before = int((b.discriminability["spread_to_noise"] > 1).sum())
-    usable_after = int((a.discriminability["spread_to_noise"] > 1).sum())
+    usable_before = below_diagonal(b)
+    usable_after = below_diagonal(a)
     sweep = pd.read_csv(AFTER / "threshold_sweep.csv")
     best = sweep.loc[sweep["dice"].idxmax()]
 
@@ -704,6 +768,22 @@ range.**
 
 ![Informational strength before and after](images/strength.png)
 
+The same thing as a scatter — the plot from the analysis notebook, one panel per run on shared log
+axes. A feature has to sit **below the diagonal**: measured better than the population varies. Above
+it, the error swamps the differences the feature is supposed to resolve. **Before: {below_diagonal(b)}
+of 6. After: {below_diagonal(a)} of 6.**
+
+Note this is stricter than the `spread / noise` column above, which is why the two counts differ.
+`spread / noise` divides by the *standard deviation* of the error, so a systematic offset costs it
+nothing; the diagonal here compares against MAPE, which includes the offset. `Vessel_density` before
+the fixes is the case that separates them: spread/noise
+{b.discriminability.loc['Vessel_density', 'spread_to_noise']:.2f} looks acceptable, but a
+{b.agreement.loc['Vessel_density', 'rel_bias_%']:+.1f}% bias puts it above the diagonal. Both readings
+are useful — one asks whether the feature can *rank* eyes, the other whether its value can be
+*quoted*.
+
+![Spread against noise, before and after](images/spread_vs_noise.png)
+
 The tortuosity measures' apparent strength before the fixes was largely an artefact: the arc-length
 inflation varied from image to image, and that variation looked like between-eye signal. Correctly
 measured, they vary less — but they vary *real*, and their noise falls by more than their spread
@@ -749,11 +829,12 @@ def main(argv=None):
     figure_predicted_vs_truth(before, images / "predicted_vs_truth_before.png", BEFORE_COLOUR)
     figure_predicted_vs_truth(after, images / "predicted_vs_truth_after.png", AFTER_COLOUR)
     figure_strength(before, after, images / "strength.png")
+    figure_spread_vs_noise_panels(before, after, images / "spread_vs_noise.png")
 
     target = args.output / "report.md"
     target.write_text(report(before, after))
 
-    print(f"6 figures -> {images}")
+    print(f"7 figures -> {images}")
     print(f"report -> {target}")
     return 0
 

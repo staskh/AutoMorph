@@ -30,7 +30,7 @@ it cannot rank eyes however good its other statistics look. Arrows run from befo
 
 ![Informational strength against measurement noise](images/strength_vs_noise.png)
 
-**Before, 4 of 6 features sat where measurement error was smaller than the spread they
+**Before, 3 of 6 features sat where measurement error was smaller than the spread they
 had to resolve. After, 6 of 6 do.** Two features moved from the unusable region into the
 usable one, and every feature moved left-and-down or stayed put.
 
@@ -345,6 +345,22 @@ range.**
 | Tortuosity_density | 0.1014 | 0.0999 | 2.3738 | 1.9270 |
 
 ![Informational strength before and after](images/strength.png)
+
+The same thing as a scatter — the plot from the analysis notebook, one panel per run on shared log
+axes. A feature has to sit **below the diagonal**: measured better than the population varies. Above
+it, the error swamps the differences the feature is supposed to resolve. **Before: 3
+of 6. After: 6 of 6.**
+
+Note this is stricter than the `spread / noise` column above, which is why the two counts differ.
+`spread / noise` divides by the *standard deviation* of the error, so a systematic offset costs it
+nothing; the diagonal here compares against MAPE, which includes the offset. `Vessel_density` before
+the fixes is the case that separates them: spread/noise
+1.45 looks acceptable, but a
+-21.4% bias puts it above the diagonal. Both readings
+are useful — one asks whether the feature can *rank* eyes, the other whether its value can be
+*quoted*.
+
+![Spread against noise, before and after](images/spread_vs_noise.png)
 
 The tortuosity measures' apparent strength before the fixes was largely an artefact: the arc-length
 inflation varied from image to image, and that variation looked like between-eye signal. Correctly
