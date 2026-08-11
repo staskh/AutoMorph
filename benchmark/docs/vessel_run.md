@@ -101,7 +101,8 @@ Everything under `benchmark/results/M2_vessels_thr02_mean/`:
 | `feature_discriminability.csv` | Spread against measurement noise |
 | `logs/` | Full stage output |
 
-The notebook adds four more:
+The notebook adds four more, and rewrites none of the runner's — one writer per file, so a rerun of
+either produces no spurious diff:
 
 | File | Contents |
 | --- | --- |

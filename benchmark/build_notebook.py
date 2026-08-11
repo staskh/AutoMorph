@@ -541,14 +541,16 @@ print("\\n".join(lines))""",
     ),
     (
         "code",
-        """# Save the tables next to the rest of this run's output.
-agreement.round(6).to_csv(RESULTS / "feature_agreement.csv")
-verdicts.round(6).to_csv(RESULTS / "feature_verdicts.csv")
-strength.round(6).to_csv(RESULTS / "feature_informational_strength.csv")
+        """# Save the analysis-only tables. One writer per file: the runner already owns
+# feature_agreement.csv, feature_informational_strength.csv and feature_discriminability.csv, so
+# this notebook does not rewrite them. Two writers for one file churn in git over row order and
+# last-bit float differences without ever disagreeing about anything real.
+verdicts.to_csv(RESULTS / "feature_verdicts.csv")
 leverage.to_csv(RESULTS / "feature_leverage.csv")
-proxy_table.round(6).to_csv(RESULTS / "dice_as_proxy.csv")
+proxy_table.to_csv(RESULTS / "dice_as_proxy.csv")
 Path(RESULTS / "conclusions.txt").write_text("\\n".join(lines) + "\\n")
-print(f"wrote agreement, verdicts, informational strength, leverage, proxy and conclusions to {RESULTS}")""",
+print(f"wrote verdicts, leverage, proxy and conclusions to {RESULTS}")
+print("(agreement, informational strength and discriminability are written by the runner)")""",
     ),
 ]
 
