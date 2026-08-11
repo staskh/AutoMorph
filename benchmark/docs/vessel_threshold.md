@@ -3,7 +3,7 @@
 ```bash
 uv run python -m benchmark.run_vessel \
     --run-root .benchmark_run_thr02 --vessel-threshold 0.2 --min-vessel-length 50 \
-    --output benchmark/results/M2_vessels_thr02
+    --output benchmark/results/M2_vessels_thr02_mean
 uv run python -m benchmark.build_notebook --profile threshold --run
 ```
 
@@ -36,14 +36,17 @@ field of view, that trade is strongly favourable: Dice and IoU both rise.
 
 ### The features improve far more than Dice does
 
+Both runs use the tortuosity fix, a 50 px minimum vessel length and mean aggregation, so the
+threshold is the only difference.
+
 | Feature | ICC at 0.5 | **ICC at 0.2** | bias % at 0.5 | **at 0.2** | MAPE % at 0.5 | **at 0.2** |
 | --- | --- | --- | --- | --- | --- | --- |
 | **Vessel_density** | 0.409 | **0.883** | −21.42 | **−0.04** | 22.05 | **6.39** |
 | **Fractal_dimension** | 0.701 | **0.921** | −2.01 | +0.53 | 2.02 | **0.93** |
-| **Squared_curvature_tortuosity** | −0.031 | **0.483** | −7.14 | −5.71 | 6.25 | 3.13 |
+| **Squared_curvature_tortuosity** | 0.236 | **0.547** | −4.67 | −3.56 | 11.94 | **8.85** |
 | **Average_width** | 0.319 | **0.641** | −12.94 | **−5.34** | 12.89 | **6.00** |
-| Tortuosity_density | 0.822 | 0.819 | −0.22 | −1.41 | 2.97 | 2.78 |
-| Distance_tortuosity | 0.868 | 0.762 | −0.09 | −0.18 | 0.21 | 0.26 |
+| Tortuosity_density | 0.813 | 0.828 | −2.02 | −2.85 | 4.86 | 4.43 |
+| Distance_tortuosity | 0.619 | 0.556 | −0.47 | −0.46 | 0.63 | 0.61 |
 
 **`Vessel_density`'s bias essentially vanishes — from −21.4% to −0.04%.** That is the headline. The
 bias reported in [results.md](results.md) as a systematic property of the pipeline was a
@@ -51,9 +54,10 @@ bias reported in [results.md](results.md) as a systematic property of the pipeli
 0.5 and being discarded. `Fractal_dimension` reaches *excellent* agreement (0.921), and
 `Average_width`'s bias more than halves.
 
-`Distance_tortuosity` is the one feature that gets slightly worse (ICC 0.868 → 0.762). Admitting
+`Distance_tortuosity` is the one feature that gets slightly worse (ICC 0.619 → 0.556). Admitting
 lower-confidence pixels roughens the skeleton, which is what an arc-chord ratio is most sensitive to.
-It remains *good*.
+`Squared_curvature_tortuosity` more than doubles its ICC and `Tortuosity_density` is unchanged, so the
+tortuosity measures as a group are not harmed.
 
 ## Is 0.2 the right threshold?
 
@@ -102,9 +106,10 @@ CPU for 32 images.
 > **Results produced before this change are not comparable.** Everything in
 > [results.md](results.md), [vessel_results.md](vessel_results.md) and
 > [tortuosity_fix.md](tortuosity_fix.md), and the stored tables in `benchmark/results/`,
-> `M2_vessels/`, `M2_vessels_fixed/` and `M2_vessels_fixed_25px/`, was produced at 0.5. Re-running
-> any of them now will give different — better — numbers. `M2_vessels_thr02/` is the one set that
-> reflects the new default.
+> `M2_vessels/`, `M2_vessels_fixed/`, `M2_vessels_fixed_25px/` and `M2_vessels_fixed_mean/`, was
+> produced at 0.5. Re-running any of them now will give different — better — numbers. The set matching
+> current defaults (0.2, mean aggregation, 50 px, tracing fix) is **`M2_vessels_thr02_mean/`**, which
+> is what the notebooks read.
 
 ## What this means for earlier conclusions
 
@@ -115,8 +120,11 @@ CPU for 32 images.
   Anywhere those documents advise calibrating it before quoting absolutes, the better fix is the
   threshold.
 - **`Fractal_dimension` becomes the most trustworthy feature** — ICC 0.921 with spread/noise 2.5.
-- Unchanged: `Squared_curvature_tortuosity` is still unusable (constant across eyes), and
-  `Tortuosity_density` still has error covering its population spread.
+- **`Squared_curvature_tortuosity` is no longer degenerate.** It was reported as constant across eyes;
+  that was the median aggregation, since reverted. At 0.2 with the mean it reaches ICC 0.547 and
+  spread/noise 1.10 — weak, but measuring something.
+- **`Tortuosity_density`'s error no longer covers its spread** either: spread/noise 1.93, against the
+  0.84 reported under the median.
 
 ## Caveats
 

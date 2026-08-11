@@ -806,7 +806,11 @@ bit-for-bit — but with three changes to how tortuosity is computed:
    inflated severalfold. It is now 0.00%.
 2. **Tortuosity only for vessels of at least 50 px.** Arc-chord ratio and curvature are unstable on
    short fragments, where a one-pixel wobble moves the ratio a long way.
-3. **Median instead of mean** across vessels, so a few exploding short segments cannot dominate.
+3. **Aggregation across vessels stays the mean**, as the original code had it. (A median was tried and
+   reverted — it collapsed the between-eye variation; see `docs/tortuosity_fix.md`.)
+
+Both runs here aggregate by mean and binarise at 0.5, so the tracing fix and the length threshold are
+the only differences.
 
 Because the segmentation is unchanged, **Dice and the three non-tortuosity features are identical**
 to the pre-fix run — a useful control: if `Fractal_dimension`, `Vessel_density` or `Average_width`
@@ -820,7 +824,7 @@ tortuosity barely varies across these 32 eyes — the pre-fix spread was tracing
 > placeholder 0.008 mm/pixel. Prediction and truth share the same scaling, so every comparison
 > statistic here is unaffected; only the absolute micron value is not physical."""
 
-FIXED_LOAD = """RESULTS = REPO_ROOT / "benchmark" / "results" / "M2_vessels_fixed"
+FIXED_LOAD = """RESULTS = REPO_ROOT / "benchmark" / "results" / "M2_vessels_fixed_mean"
 PRE_FIX = REPO_ROOT / "benchmark" / "results" / "M2_vessels"
 FULL_RESULTS = REPO_ROOT / "benchmark" / "results"
 RUN_LABEL = "M0 + M2 vessel only, gate bypassed, tortuosity fix applied"
@@ -1008,15 +1012,15 @@ The motivation was a measured asymmetry: at 0.5 the ensemble reached sensitivity
 specificity 0.995. It was missing about a quarter of the annotated vessel while inventing almost
 nothing, which is what a threshold set too high looks like.
 
-Section 4 is the before-and-after. Both runs use the tortuosity fix and a 50 px minimum vessel
-length, so the threshold is the only difference.
+Section 4 is the before-and-after. Both runs use the tortuosity fix, a 50 px minimum vessel length and
+mean aggregation, so **the threshold is the only difference** — no confounding.
 
 > `Average_width` is in nominal microns: FIVES publishes no pixel size, so the benchmark writes a
 > placeholder 0.008 mm/pixel. Prediction and truth share the same scaling, so every comparison
 > statistic here is unaffected; only the absolute micron value is not physical."""
 
-THRESHOLD_LOAD = """RESULTS = REPO_ROOT / "benchmark" / "results" / "M2_vessels_thr02"
-BASELINE = REPO_ROOT / "benchmark" / "results" / "M2_vessels_fixed"
+THRESHOLD_LOAD = """RESULTS = REPO_ROOT / "benchmark" / "results" / "M2_vessels_thr02_mean"
+BASELINE = REPO_ROOT / "benchmark" / "results" / "M2_vessels_fixed_mean"
 FULL_RESULTS = REPO_ROOT / "benchmark" / "results"
 RUN_LABEL = "M0 + M2 vessel only, gate bypassed, tortuosity fix, threshold 0.2"
 GATE_ENFORCED = False

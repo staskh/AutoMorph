@@ -88,16 +88,22 @@ That is the evidence the change is confined to tortuosity.
 
 ## 4. Agreement improved sharply
 
+Both sides aggregate by **mean**, so this isolates the tracing fix and the length threshold.
+
 | Feature | ICC before | **ICC after** | MAPE % before | **after** | bias % before | **after** |
 | --- | --- | --- | --- | --- | --- | --- |
-| **Distance_tortuosity** | 0.412 | **0.868** | 27.6 | **0.21** | +10.6 | **−0.09** |
-| **Tortuosity_density** | 0.757 | **0.822** | 3.55 | **2.97** | −0.57 | **−0.22** |
-| Squared_curvature_tortuosity | 0.544 | −0.031 | 90.2 | **6.25** | +10.2 | −7.1 |
+| **Distance_tortuosity** | 0.412 | **0.619** | 27.6 | **0.63** | +10.6 | **−0.47** |
+| **Tortuosity_density** | 0.757 | **0.813** | 3.55 | 4.86 | −0.57 | −2.02 |
+| Squared_curvature_tortuosity | 0.544 | 0.236 | 90.2 | **11.9** | +10.2 | −4.7 |
 
-`Distance_tortuosity` goes from *poor* to *good* agreement, and its per-image error falls by a factor
-of 130 — from 27.6% to 0.21%. Its median value drops from 3.38 to **1.080**, which is where a retinal
-arc-chord ratio belongs. The pre-fix number was not a noisy measurement of tortuosity; it was a
-measurement of the tracing bug.
+`Distance_tortuosity` improves from *poor* to *moderate* agreement, and its per-image error falls by a
+factor of 44 — from 27.6% to 0.63%. Its median value drops from 3.38 to **1.090**, which is where a
+retinal arc-chord ratio belongs. The pre-fix number was not a noisy measurement of tortuosity; it was
+a measurement of the tracing bug.
+
+`Squared_curvature_tortuosity`'s ICC falls (0.544 → 0.236), but its pre-fix 0.544 was a single
+outlier's doing — 0.144 on leave-one-out — so the honest comparison is 0.144 → 0.236, an improvement.
+Its error falls from 90% to 12% either way.
 
 ## 5. And it revealed that the spread was artefact
 
@@ -105,12 +111,16 @@ Agreement improved, but the **between-eye spread collapsed**:
 
 | Feature | IQR/median before | **after** | spread/noise before | **after** |
 | --- | --- | --- | --- | --- |
-| Distance_tortuosity | 0.373 | **0.0039** | 0.96 | 1.22 |
-| Squared_curvature_tortuosity | 0.738 | **0.0000** | 0.41 | 0.00 |
-| Tortuosity_density | 0.101 | **0.0368** | 2.37 | **0.84** |
+| Distance_tortuosity | 0.373 | **0.0123** | 0.96 | **1.15** |
+| Squared_curvature_tortuosity | 0.738 | **0.1234** | 0.41 | **0.82** |
+| Tortuosity_density | 0.101 | 0.0999 | 2.37 | 1.76 |
 
-Correctly computed, `Distance_tortuosity` spans 1.072–1.105 across all 32 eyes and
-`Squared_curvature_tortuosity` is constant to four decimal places.
+Correctly computed, `Distance_tortuosity` spans 1.074–1.148 across all 32 eyes — a real but narrow
+range, against the physically impossible 2.03–5.97 the tracing bug produced.
+
+`Tortuosity_density`'s spread is essentially unchanged (0.101 → 0.0999); the collapse is confined to
+the two arc-length-based measures, and it is much milder than the median made it look
+(see [§8](#8-mean-vs-median-across-vessels)).
 
 So the pre-fix "informational strength" of the tortuosity measures — which
 [results.md](results.md) reported as the *highest* of the six features (0.37 and 0.74) — **was not
@@ -118,8 +128,9 @@ anatomy**. It was per-image variation in how badly the tracing jumped: noise dre
 correction matters more than the ICC improvement, because it inverts an earlier conclusion.
 
 **The 50-px threshold is not responsible.** With ordering fixed, ground-truth `Distance_tortuosity`
-spread is 0.0024 at a 15-px threshold and 0.0039 at 50 px — the threshold slightly *increases* it.
-The collapse is attributable to the ordering fix alone.
+spread is 0.0024 at a 15-px threshold and 0.0039 at 50 px (both measured under the median) — the
+threshold slightly *increases* it. The collapse is attributable to the ordering fix, and in part to
+the median that has since been reverted.
 
 ## 6. Choosing the threshold: 50 px vs 25 px
 
