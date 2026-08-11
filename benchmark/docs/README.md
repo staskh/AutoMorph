@@ -37,6 +37,7 @@ calibration, and one had no detectable relationship with the truth.
 | [vessel_run.md](vessel_run.md) | The vessel-only run: all 32 images, no quality gate |
 | [vessel_results.md](vessel_results.md) | What the vessel-only run shows |
 | [fixes.md](fixes.md) | Three defects the benchmark found, and what fixing them changed |
+| [../report_post_fix/report.md](../report_post_fix/report.md) | The post-fix report: before/after with figures |
 
 ## The recorded runs
 
@@ -93,6 +94,7 @@ benchmark/
   run.py                   run every module in order, timed, and score the result
   run_vessel.py            M0 + M2 vessel only, no quality gate, both feature sets
   build_notebook.py        generate both notebooks (edit here, not the .ipynb)
+  build_report.py          generate report_post_fix/ — figures and every table from the runs
   analysis.ipynb           full-run analysis, with plots
   analysis_M2_vessels.ipynb  vessel-only analysis, incl. grading the quality gate
   analysis_M2_vessels_thr02.ipynb  the same with all fixes applied, plus a before/after section
@@ -108,6 +110,7 @@ benchmark/
   results/End2End_original/      the original end-to-end run
   results/M2_vessels/            vessel-only, frozen pre-fix baseline
   results/M2_vessels_thr02_mean/ vessel-only, current defaults
+  report_post_fix/         the post-fix report and its figures (generated)
 ```
 
 The lower group builds the dataset store; the upper group runs and scores the benchmark. Only
