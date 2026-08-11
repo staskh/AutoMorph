@@ -73,7 +73,7 @@ datasets outlive any single run.
 
 Selection is **not** sampling. Candidates are sorted by key and the first 8 of each disease are
 taken, so a rerun against the same store picks the same 32 images with no random seed to carry
-around. The chosen rows are written to `benchmark/results/selection.csv` every run.
+around. The chosen rows are written to `benchmark/results/End2End_original/selection.csv` every run.
 
 Quality-3 images available per disease in the `test` split — every group clears 8 comfortably:
 

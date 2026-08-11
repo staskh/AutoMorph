@@ -252,7 +252,7 @@ def main(argv=None):
     """Build the ground-truth masks and write their feature table."""
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--store", type=Path, default=REPO_ROOT / ".benchmark_data" / "fives")
-    parser.add_argument("--selection-csv", type=Path, default=REPO_ROOT / "benchmark" / "results" / "selection.csv")
+    parser.add_argument("--selection-csv", type=Path, default=REPO_ROOT / "benchmark" / "results" / "End2End_original" / "selection.csv")
     parser.add_argument("--run-root", type=Path, default=REPO_ROOT / ".benchmark_run")
     parser.add_argument("--size", type=int, default=PIPELINE_SIZE)
     parser.add_argument("--skip-masks", action="store_true", help="measure masks already on disk")

@@ -35,7 +35,7 @@ deliberate: a late module failing should not throw away the hours of segmentatio
 the completion counts make the damage visible — a stage that failed shows up as a shortfall in
 `completion.csv` rather than as a missing report.
 
-Full stdout and stderr for every stage, every attempt, lands in `benchmark/results/logs/`.
+Full stdout and stderr for every stage, every attempt, lands in `benchmark/results/End2End_original/logs/`.
 
 ## Options
 

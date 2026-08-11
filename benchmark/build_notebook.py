@@ -592,7 +592,7 @@ Everything below is therefore conditioned on the survivors. The companion notebo
 > placeholder 0.008 mm/pixel. Prediction and truth share the same scaling, so every comparison
 > statistic here is unaffected; only the absolute micron value is not physical."""
 
-FULL_LOAD = """RESULTS = REPO_ROOT / "benchmark" / "results"
+FULL_LOAD = """RESULTS = REPO_ROOT / "benchmark" / "results" / "End2End_original"
 RUN_RESULTS = REPO_ROOT / ".benchmark_run" / "Results"
 RUN_LABEL = "full pipeline, M1 quality gate enforced"
 GATE_ENFORCED = True
@@ -680,7 +680,7 @@ Because nothing is filtered out first, the numbers here are free of the survivor
 > statistic here is unaffected; only the absolute micron value is not physical."""
 
 VESSEL_LOAD = """RESULTS = REPO_ROOT / "benchmark" / "results" / "M2_vessels"
-FULL_RESULTS = REPO_ROOT / "benchmark" / "results"
+FULL_RESULTS = REPO_ROOT / "benchmark" / "results" / "End2End_original"
 RUN_LABEL = "M0 + M2 vessel only, M1 quality gate bypassed"
 GATE_ENFORCED = False
 
@@ -824,7 +824,7 @@ Aggregation across vessels remains the **mean**, as the original code had it.
 
 THRESHOLD_LOAD = """RESULTS = REPO_ROOT / "benchmark" / "results" / "M2_vessels_thr02_mean"
 BASELINE = REPO_ROOT / "benchmark" / "results" / "M2_vessels"
-FULL_RESULTS = REPO_ROOT / "benchmark" / "results"
+FULL_RESULTS = REPO_ROOT / "benchmark" / "results" / "End2End_original"
 RUN_LABEL = "M0 + M2 vessel only, gate bypassed, all fixes applied"
 GATE_ENFORCED = False
 

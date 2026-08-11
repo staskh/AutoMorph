@@ -292,18 +292,18 @@ skipping if only vessel accuracy is wanted, which is what
 
 ## Files
 
-Per-image data behind every number above:
+Per-image data behind every number above, all under `benchmark/results/End2End_original/`:
 
 | Path | Contents |
 | --- | --- |
-| `benchmark/results/vessel_scores.csv` | Per-image confusion counts and scores |
-| `benchmark/results/vessel_summary.csv` | Scores per disease and overall |
-| `benchmark/results/completion.csv` | Images surviving each module |
-| `benchmark/results/stage_timings.csv` | Per-stage status and wall clock |
-| `benchmark/results/feature_agreement.csv` | bias, rel. bias, MAE, MAPE, Pearson, Spearman, ICC(2,1) + CI, Bland–Altman |
-| `benchmark/results/feature_informational_strength.csv` | GT median, IQR, IQR/median |
-| `benchmark/results/feature_verdicts.csv` | The combined verdict table |
-| `benchmark/results/conclusions.txt` | The conclusions, generated from the run |
-| `benchmark/results/selection.csv` | The 32 images and their FIVES labels |
+| `End2End_original/vessel_scores.csv` | Per-image confusion counts and scores |
+| `End2End_original/vessel_summary.csv` | Scores per disease and overall |
+| `End2End_original/completion.csv` | Images surviving each module |
+| `End2End_original/stage_timings.csv` | Per-stage status and wall clock |
+| `End2End_original/feature_agreement.csv` | bias, rel. bias, MAE, MAPE, Pearson, Spearman, ICC(2,1) + CI, Bland–Altman |
+| `End2End_original/feature_informational_strength.csv` | GT median, IQR, IQR/median |
+| `End2End_original/feature_verdicts.csv` | The combined verdict table |
+| `End2End_original/conclusions.txt` | The conclusions, generated from the run |
+| `End2End_original/selection.csv` | The 32 images and their FIVES labels |
 | `.benchmark_run/Results/M3/Ground_truth_Macular_Features.csv` | Features from the annotations |
 | `benchmark/analysis.ipynb` | The analysis, with plots |

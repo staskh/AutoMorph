@@ -38,7 +38,9 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 
 DEFAULT_RUN_ROOT = REPO_ROOT / ".benchmark_run"
 DEFAULT_STORE = REPO_ROOT / ".benchmark_data" / "fives"
-DEFAULT_OUTPUT = REPO_ROOT / "benchmark" / "results"
+#: One directory per run under benchmark/results/, so the runs stay distinguishable. This one is the
+#: original end-to-end pipeline record; see benchmark/docs/README.md for the full inventory.
+DEFAULT_OUTPUT = REPO_ROOT / "benchmark" / "results" / "End2End_original"
 
 #: M1's quality ensemble runs eight EfficientNet-B4 models; a smaller batch keeps peak memory
 #: predictable on CPU. Batch size does not change the predictions — every model runs in eval mode.

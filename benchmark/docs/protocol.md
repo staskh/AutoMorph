@@ -5,7 +5,7 @@
 ### 1. Completion
 
 How many of the 32 images each module produced output for. Written to
-`benchmark/results/completion.csv`.
+`benchmark/results/End2End_original/completion.csv`.
 
 This is not a formality. M1 is a **gate**: `merge_quality_assessment.py` sorts every image into
 `Results/M1/Good_quality/` or `Results/M1/Bad_quality/`, and M2 reads only the former. An image M1
@@ -15,7 +15,7 @@ every benchmark image is FIVES quality 3, the gate's rejection rate is a result 
 ### 2. Vessel segmentation accuracy
 
 M2's binary vessel map against the FIVES expert annotation, on the 912x912 grid the network works
-in and M3 consumes. Per image in `benchmark/results/vessel_scores.csv`, averaged per disease and
+in and M3 consumes. Per image in `benchmark/results/End2End_original/vessel_scores.csv`, averaged per disease and
 overall in `vessel_summary.csv`.
 
 With TP/FP/FN/TN counted **inside the field of view only**:
@@ -55,7 +55,7 @@ the scores worth reading; sensitivity says which way the errors fall.
 
 Dice measures pixels; AutoMorph reports morphometry. So the six whole-image features are also
 measured **from the expert annotation** and compared with the predicted values image by image.
-Written to `benchmark/results/feature_agreement.csv` by `benchmark/analysis.ipynb`; the statistics
+Written to `benchmark/results/End2End_original/feature_agreement.csv` by `benchmark/analysis.ipynb`; the statistics
 themselves live in `benchmark/agreement.py`, which is unit-tested — ICC against hand-computed ANOVA
 values.
 
@@ -101,7 +101,7 @@ a confusing read error:
 
 ### 4. Wall-clock time
 
-Per stage, with attempt count and exit status, in `benchmark/results/stage_timings.csv`.
+Per stage, with attempt count and exit status, in `benchmark/results/End2End_original/stage_timings.csv`.
 
 ## Aligning the annotation
 

@@ -47,12 +47,14 @@ def test_output_is_separate_from_the_full_run():
 def test_default_output_does_not_clobber_a_frozen_result_set():
     """M2_vessels holds the pre-fix baseline the comparison notebook reads; nothing may overwrite it."""
     assert DEFAULT_OUTPUT.name != "M2_vessels"
-    assert (FULL_OUTPUT / "M2_vessels").is_dir(), "the pre-fix baseline has gone missing"
+    assert (FULL_OUTPUT.parent / "M2_vessels").is_dir(), "the pre-fix baseline has gone missing"
 
 
-def test_output_is_nested_under_the_full_run_output():
-    """A subdirectory, so the two sets of results sit together without colliding."""
-    assert DEFAULT_OUTPUT.parent == FULL_OUTPUT
+def test_every_run_gets_its_own_directory_under_results():
+    """One directory per run, so runs stay distinguishable and cannot overwrite each other."""
+    assert DEFAULT_OUTPUT.parent == FULL_OUTPUT.parent == Path(FULL_OUTPUT).parents[0]
+    assert DEFAULT_OUTPUT.parent.name == "results"
+    assert DEFAULT_OUTPUT.name != FULL_OUTPUT.name
 
 
 def test_bypass_copies_every_preprocessed_image(tmp_path):
