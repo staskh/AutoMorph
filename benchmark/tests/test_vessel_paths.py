@@ -191,17 +191,16 @@ def test_the_benchmark_sets_its_own_threshold_not_retipy_default():
     assert "min_vessel_length," in source, "the chosen threshold must reach evaluate_window"
 
 
-def test_evaluate_window_aggregates_by_median_not_mean():
-    """A mean would be dragged up by the single extreme segment; a median must not be."""
+def test_evaluate_window_aggregates_the_three_measures_consistently():
+    """Whichever aggregate is chosen, all three tortuosity measures must use the same one."""
     import inspect
 
     from retipy import tortuosity_measures
 
     source = inspect.getsource(tortuosity_measures.evaluate_window)
-    assert "np.median(t2_values)" in source
-    assert "np.median(t4_values)" in source
-    assert "np.median(td_values)" in source
-    assert "t2 = t2/vessel_count" not in source
+    for name in ("t2_values", "t4_values", "td_values"):
+        assert f"np.mean({name})" in source, f"{name} is not aggregated like the others"
+    assert "np.median(" not in source, "a median is left behind in one place"
 
 
 def test_retina_stays_identical_between_the_two_retipy_copies():

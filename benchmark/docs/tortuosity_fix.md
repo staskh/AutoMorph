@@ -65,8 +65,9 @@ keep passing `CONFIG.pixels_per_window` (15) and are unaffected. The one behavio
 callers is that the comparison is now `>=` rather than `>`, so a 15-pixel segment is included where
 it previously needed 16.
 
-**Median instead of mean** across vessels, so the few short segments whose ratio explodes cannot
-dominate the image's value.
+**Aggregation across vessels** was briefly changed from mean to median, then **reverted to the
+original mean** — see [the comparison below](#8-mean-vs-median-across-vessels). The median turned out
+to destroy the between-eye variation the feature exists to capture.
 
 The fix is applied to **both** retipy copies so `retina.py` stays identical between them. The zone
 copy's `evaluate_window` aggregation is untouched, so zone features are unaffected except through the
@@ -188,3 +189,58 @@ reason: not that it disagrees with the truth, but that it has nothing to say.
 - [vessel_results.md](vessel_results.md) — the pre-fix run these numbers are compared against
 - `benchmark/analysis_M2_vessels_fixed.ipynb` — the comparison, with plots
 - `benchmark/results/M2_vessels_fixed/` — the result tables
+
+## 8. Mean vs median across vessels
+
+`evaluate_window` measures every vessel in an image and reduces them to one number. The original code
+took the **mean**. It was briefly changed to the **median**, on the reasoning that a mean is dragged
+up by short segments whose arc-chord ratio explodes when the chord is only a few pixels. That
+reasoning was wrong twice over: `min_pixels_per_vessel` already excludes those segments, and the
+median throws away exactly the information the feature is for.
+
+Same masks (threshold 0.2), same 50 px minimum, only the aggregate differs. The three features that
+do not use it are byte-identical, which is the control.
+
+| Feature | agg | ICC | bias % | MAPE % | Spearman | IQR/median | spread/noise |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| Distance_tortuosity | median | **0.762** | −0.18 | **0.26** | 0.809 | 0.0039 | 1.01 |
+| | **mean** | 0.556 | −0.46 | 0.61 | **0.864** | **0.0123** | **1.13** |
+| Squared_curvature_tortuosity | median | 0.483 | −5.71 | **3.13** | 0.450 | **0.0000** | **0.00** |
+| | **mean** | **0.547** | −3.56 | 8.85 | 0.459 | **0.1234** | **1.10** |
+| Tortuosity_density | median | 0.819 | −1.41 | **2.78** | 0.720 | 0.0368 | 0.87 |
+| | **mean** | **0.828** | −2.85 | 4.43 | **0.858** | **0.0999** | **1.93** |
+
+### The median was making features degenerate
+
+Distinct ground-truth values across the 32 eyes:
+
+| Feature | median | mean |
+| --- | --- | --- |
+| Distance_tortuosity | 32 | 32 |
+| **Squared_curvature_tortuosity** | **3** | **32** |
+| Tortuosity_density | 31 | 32 |
+
+Under the median, `Squared_curvature_tortuosity` took **three distinct values across 32 eyes** — and
+at a 25 px threshold, [one](#6-choosing-the-threshold-50-px-vs-25-px). A median over ~50 vessels lands
+on a discrete, repeated value; the between-eye differences live in the tail, which the median
+discards by construction.
+
+Restoring the mean fixes that. Every feature becomes distinct per eye, `IQR/median` rises by 3x to
+30x, and **spread-to-noise improves for all three** — from 0.87 to 1.93 for `Tortuosity_density`, and
+from 0.00 to 1.10 for `Squared_curvature_tortuosity`, which crosses from "cannot discriminate" to
+usable. Spearman improves for all three too.
+
+### The trade
+
+The mean is less *precise*: `Distance_tortuosity` loses ICC (0.762 → 0.556) and its per-image error
+doubles (0.26% → 0.61%). That is the honest cost — averaging admits the tail's variance, some of which
+is noise.
+
+But precision about a constant is worthless, and that is what the median was delivering. The spread
+the mean recovers is larger than the noise it admits, which is exactly what `spread_to_noise` measures
+and it improves in all three cases. **The mean is the better aggregate here, and it is what the
+original code did.**
+
+The earlier conclusion that "correctly-computed tortuosity barely varies across these eyes" was
+therefore partly an artefact of the median, not only of the tracing fix. With the mean, ground-truth
+`Distance_tortuosity` spans 1.074–1.148 rather than 1.072–1.105.

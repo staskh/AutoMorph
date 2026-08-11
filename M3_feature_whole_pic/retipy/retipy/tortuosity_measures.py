@@ -454,9 +454,9 @@ def evaluate_window(window: Window, min_pixels_per_vessel=10, sampling_size=6, r
         w1_list_average = []
         vessel_count_list = []
 
-        # Per-vessel values, aggregated by median. A mean is dominated by the few short segments
-        # whose arc-chord ratio explodes when the chord is a couple of pixels long; the median
-        # describes the typical vessel instead of the worst measurement.
+        # Per-vessel values, aggregated by mean, as the original code did. The exploding arc-chord
+        # ratios that make a mean fragile came from very short segments, and min_pixels_per_vessel
+        # already excludes those, so the mean's sensitivity to them is bounded here.
         t2_values, t4_values, td_values = [], [], []
 
         for vessel in vessels:
@@ -473,8 +473,8 @@ def evaluate_window(window: Window, min_pixels_per_vessel=10, sampling_size=6, r
                 vessel_count_list.append(vessel_count)
 
         if vessel_count > 0:
-            t2 = float(np.median(t2_values))
-            t4 = float(np.median(t4_values))
-            td = float(np.median(td_values))
+            t2 = float(np.mean(t2_values))
+            t4 = float(np.mean(t4_values))
+            td = float(np.mean(td_values))
 
     return FD_binary,VD_binary,Average_width, t2, t4, td
