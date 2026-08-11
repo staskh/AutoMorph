@@ -32,7 +32,7 @@ NUM_WORKERS = int(os.getenv('NUM_WORKERS', 8)) # use num_workers=0 to disable mu
 # it to 0.2 raises Dice from 0.825 to 0.855 and removes a 21% low bias in vessel density.
 #
 # 0.2 is the Dice optimum over a sweep of the saved sigmoid maps, and the maximum is broad: 0.15 to
-# 0.25 all land within 0.002. See benchmark/docs/vessel_threshold.md.
+# 0.25 all land within 0.002. See benchmark/docs/fixes.md.
 VESSEL_THRESHOLD = float(os.getenv('AUTOMORPH_VESSEL_THRESHOLD', 0.2))
 
 def filter_frag(data_path):

@@ -1,4 +1,4 @@
-RUN: M0 + M2 vessel only, gate bypassed, tortuosity fix, threshold 0.2
+RUN: M0 + M2 vessel only, gate bypassed, all fixes applied
 
 SEGMENTATION
   Dice 0.855, sensitivity 0.852, specificity 0.983 over n=32.

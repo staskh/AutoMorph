@@ -1,7 +1,0 @@
-feature,rel_bias_%,MAE,MAPE_%,pearson_r,spearman_r,ICC21,ICC_robust,gt_IQR_over_median,spread_to_noise,verdict
-Fractal_dimension,-2.007139,0.029561,2.023783,0.926006,0.868768,0.700681,0.700681,0.022841,1.645384,usable with care
-Vessel_density,-21.42117,0.017911,22.051841,0.889168,0.791861,0.409098,0.409098,0.10406,1.445771,"rank-usable, biased - calibrate before quoting absolutes"
-Average_width,-12.943359,14.932357,12.885592,0.765877,0.832478,0.319458,0.319458,0.105065,1.96624,"rank-usable, biased - calibrate before quoting absolutes"
-Distance_tortuosity,-0.472546,0.007002,0.630801,0.692737,0.848974,0.618484,0.818434,0.01227,1.152984,reliable
-Squared_curvature_tortuosity,-4.670307,0.015617,11.94285,0.251553,0.250367,0.236175,0.236175,0.123374,0.824363,unusable - no agreement with truth
-Tortuosity_density,-2.019242,0.030567,4.85565,0.827421,0.719575,0.812748,0.812748,0.099887,1.755723,reliable

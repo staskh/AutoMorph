@@ -42,7 +42,12 @@ def test_run_root_is_separate_from_the_full_run():
 
 def test_output_is_separate_from_the_full_run():
     assert DEFAULT_OUTPUT != FULL_OUTPUT
-    assert DEFAULT_OUTPUT.name == "M2_vessels"
+
+
+def test_default_output_does_not_clobber_a_frozen_result_set():
+    """M2_vessels holds the pre-fix baseline the comparison notebook reads; nothing may overwrite it."""
+    assert DEFAULT_OUTPUT.name != "M2_vessels"
+    assert (FULL_OUTPUT / "M2_vessels").is_dir(), "the pre-fix baseline has gone missing"
 
 
 def test_output_is_nested_under_the_full_run_output():
@@ -195,3 +200,10 @@ def test_m2_and_the_benchmark_agree_on_the_default_threshold():
     root = Path(__file__).resolve().parents[2]
     source = (root / "M2_Vessel_seg" / "test_outside_integrated.py").read_text()
     assert f"os.getenv('AUTOMORPH_VESSEL_THRESHOLD', {DEFAULT_VESSEL_THRESHOLD})" in source
+
+
+def test_default_run_root_does_not_clobber_the_frozen_baseline():
+    """.benchmark_run_vessel holds the pre-fix masks; a default run must not rmtree them."""
+    from benchmark.run_vessel import DEFAULT_RUN_ROOT
+
+    assert DEFAULT_RUN_ROOT.name != ".benchmark_run_vessel"

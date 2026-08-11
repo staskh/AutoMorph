@@ -75,7 +75,7 @@ OBJECT_CONNECTIVITY = 5
 #: This is the benchmark's choice, passed explicitly to ``evaluate_window`` — the threshold is a
 #: measurement policy, so it belongs with the caller rather than baked into the library.
 #:
-#: Override per run with ``--min-vessel-length``; see benchmark/docs/tortuosity_fix.md for what the
+#: Override per run with ``--min-vessel-length``; see benchmark/docs/fixes.md for what the
 #: choice costs and buys.
 MIN_VESSEL_LENGTH = 50
 

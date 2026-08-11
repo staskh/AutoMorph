@@ -1,16 +1,10 @@
 # Results
 
-> **Superseded on under-segmentation and `Vessel_density` bias.** M2 binarised vessel probability at
-> 0.5; at 0.2 sensitivity rises 0.736 -> 0.852 and `Vessel_density`'s bias falls from -21.4% to -0.04%.
-> See [vessel_threshold.md](vessel_threshold.md). The bias reported below is a thresholding artefact,
-> not a property of the model.
+> **Recorded before the fixes in [fixes.md](fixes.md).** Vessel tracing, the tortuosity length
+> threshold and the binarisation threshold have since changed. The findings below on the M1
+> quality gate, completion and protocol stand; the under-segmentation and `Vessel_density` bias
+> do not — sensitivity is now 0.852 rather than 0.736, and that bias falls from −21% to −0.04%.
 
-> **Superseded for the tortuosity features.** Every tortuosity number below was computed on
-> non-adjacent point pairs, because `detect_vessel_border` returned vessel pixels in flood-fill order
-> rather than path order — see [tortuosity_fix.md](tortuosity_fix.md). Two conclusions there change:
-> `Distance_tortuosity` becomes the second-most-trustworthy feature, and the high "informational
-> strength" credited to the tortuosity measures here was tracing artefact. Dice, completion, and the
-> three non-tortuosity features are unaffected.
 
 One run, 32 FIVES images, CPU only. Reproduce with `uv run python -m benchmark.run`.
 

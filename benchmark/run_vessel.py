@@ -56,9 +56,13 @@ from benchmark.run import (
 )
 from benchmark.selection import load_manifest, select, stage as stage_images
 
-DEFAULT_RUN_ROOT = REPO_ROOT / ".benchmark_run_vessel"
+#: Current run root. ``.benchmark_run_vessel`` holds the frozen pre-fix masks, so the default points
+#: elsewhere — a default run must not be able to destroy the baseline it is compared against.
+DEFAULT_RUN_ROOT = REPO_ROOT / ".benchmark_run_thr02"
 DEFAULT_STORE = REPO_ROOT / ".benchmark_data" / "fives"
-DEFAULT_OUTPUT = REPO_ROOT / "benchmark" / "results" / "M2_vessels"
+#: Current results. ``M2_vessels`` holds the frozen pre-fix baseline the notebook compares against,
+#: so the default must not point there — see benchmark/docs/fixes.md.
+DEFAULT_OUTPUT = REPO_ROOT / "benchmark" / "results" / "M2_vessels_thr02_mean"
 
 #: Only the two stages whose output this run reports on.
 STAGES = [

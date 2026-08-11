@@ -57,7 +57,7 @@ A few optional environment variables are available for all pipelines:
 - AUTOMORPH_DATA : the directory where the Results are stored. If not defined, the "Results" subdirectory is created in the current directory. If AUTOMORPH_DATA defined outside of source directory (for example, /tmp/AutoMorh ) source directory can be made read-only - for deployment inside of AWS Lambda.
 - NUM_WORKERS : defines a number of workers for the dataloader. The default is 8. If NUM_WORKERS is set to 0, the dataloader will be single-threaded.
 - AUTOMORPH_BATCH_SIZE : batch size for the M1 quality ensemble. The default is 64. Lower it if you hit a memory error (see below).
-- AUTOMORPH_VESSEL_THRESHOLD : probability above which M2 calls a pixel vessel. The default is 0.2. Raise it towards 0.5 for a more conservative segmentation. Benchmarked against the FIVES expert annotations, 0.2 is the Dice optimum and 0.5 costs about 0.03 Dice and 0.12 sensitivity — see [benchmark/docs/vessel_threshold.md](benchmark/docs/vessel_threshold.md).
+- AUTOMORPH_VESSEL_THRESHOLD : probability above which M2 calls a pixel vessel. The default is 0.2. Raise it towards 0.5 for a more conservative segmentation. Benchmarked against the FIVES expert annotations, 0.2 is the Dice optimum and 0.5 costs about 0.03 Dice and 0.12 sensitivity — see [benchmark/docs/fixes.md](benchmark/docs/fixes.md).
 - AUTOMORPH_DEVICE : pins the torch device used by every inference module, e.g. `cpu`, `cuda:0` or `mps`. If not defined, CUDA is used when available, then MPS, then CPU. Setting it to `cpu` gives reproducible runs on machines that would otherwise pick an accelerator.
 
 ### Memory/ram error

@@ -6,7 +6,7 @@ uv run python -m benchmark.run_vessel
 
 Preprocessing and M2 vessel segmentation over **all 32 images**, with the M1 quality gate bypassed.
 Reports Dice and the six morphometric features measured from *both* the prediction and the expert
-annotation. About two hours on CPU; results land in `benchmark/results/M2_vessels/`.
+annotation. About 25 minutes on CPU; results land in `benchmark/results/M2_vessels_thr02_mean/`.
 
 ## Why it exists
 
@@ -48,12 +48,16 @@ run's six hours and none of them feeds a number reported here.
 
 | | Full run | Vessel-only run |
 | --- | --- | --- |
-| Run root | `.benchmark_run/` | `.benchmark_run_vessel/` |
-| Output | `benchmark/results/` | `benchmark/results/M2_vessels/` |
+| Run root | `.benchmark_run/` | `.benchmark_run_thr02/` |
+| Output | `benchmark/results/` | `benchmark/results/M2_vessels_thr02_mean/` |
 
 Separate roots, separate outputs. `run_vessel.py` **refuses to start** if `--run-root` points at the
 full run's directory, so the recorded end-to-end results cannot be destroyed by a stray flag. The
 two sets of numbers are meant to be read side by side.
+
+`benchmark/results/M2_vessels/` and `.benchmark_run_vessel/` hold the **frozen pre-fix baseline** that
+[fixes.md](fixes.md) compares against. Neither is a default target, so a default run cannot destroy
+it.
 
 ## How the features are measured
 
@@ -81,7 +85,7 @@ would cost.
 
 ## Output
 
-Everything under `benchmark/results/M2_vessels/`:
+Everything under `benchmark/results/M2_vessels_thr02_mean/`:
 
 | File | Contents |
 | --- | --- |

@@ -45,7 +45,7 @@ DEFAULT_OUTPUT = REPO_ROOT / "benchmark" / "results"
 DEFAULT_BATCH_SIZE = 8
 
 #: Probability above which M2 calls a pixel vessel, matching the pipeline's own default.
-#: See benchmark/docs/vessel_threshold.md for why it is 0.2 rather than 0.5.
+#: See benchmark/docs/fixes.md for why it is 0.2 rather than 0.5.
 DEFAULT_VESSEL_THRESHOLD = 0.2
 
 

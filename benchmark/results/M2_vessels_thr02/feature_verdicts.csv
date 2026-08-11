@@ -1,7 +1,0 @@
-feature,rel_bias_%,MAE,MAPE_%,pearson_r,spearman_r,ICC21,ICC_robust,gt_IQR_over_median,spread_to_noise,verdict
-Fractal_dimension,0.531602,0.013676,0.928637,0.960366,0.92412,0.92113,0.92113,0.022841,2.499616,reliable
-Vessel_density,-0.035499,0.005225,6.391484,0.924277,0.825147,0.882945,0.882945,0.10406,1.407626,usable with care
-Average_width,-5.337667,6.989793,6.003838,0.784125,0.853006,0.640644,0.640644,0.105065,2.010594,usable with care
-Distance_tortuosity,-0.175049,0.002875,0.264253,0.81392,0.808651,0.761556,0.761556,0.003858,1.013701,reliable
-Squared_curvature_tortuosity,-5.714286,0.00559,3.125,0.558416,0.449804,0.483333,0.0,0.0,0.0,unusable - no agreement with truth
-Tortuosity_density,-1.409252,0.023428,2.778215,0.931988,0.719824,0.819287,0.554804,0.03682,0.869311,error covers the population spread - cannot rank eyes

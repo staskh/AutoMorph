@@ -794,235 +794,38 @@ else:
     ),
 ]
 
-FIXED_INTRO = """# AutoMorph on FIVES — vessel-only run, after the tortuosity fix
+THRESHOLD_INTRO = """# AutoMorph on FIVES — vessel-only run, all fixes applied
 
-Identical to `analysis_M2_vessels.ipynb` — the same 32 images, the **same segmentation masks**,
-bit-for-bit — but with three changes to how tortuosity is computed:
+The same 32 images as `analysis_M2_vessels.ipynb`, with three changes to how AutoMorph segments and
+measures vessels. Section 4 compares against that pre-fix run, so this is the whole before-and-after
+in one place.
 
-1. **`detect_vessel_border` returns traced paths.** It previously returned pixels in flood-fill
-   *discovery* order. Every tortuosity measure assumes consecutive points are consecutive positions
-   along the vessel, so discovery order silently broke all of them: on this data 6.2% of consecutive
-   pairs were non-adjacent, averaging 42 px apart and peaking at 145 px on a 912 grid. Arc length was
-   inflated severalfold. It is now 0.00%.
-2. **Tortuosity only for vessels of at least 50 px.** Arc-chord ratio and curvature are unstable on
-   short fragments, where a one-pixel wobble moves the ratio a long way.
-3. **Aggregation across vessels stays the mean**, as the original code had it. (A median was tried and
-   reverted — it collapsed the between-eye variation; see `docs/tortuosity_fix.md`.)
+**1. Vessels are traced as paths.** `detect_vessel_border` returned pixels in flood-fill *discovery*
+order, not path order. Every tortuosity measure treats consecutive points as consecutive positions
+along the vessel, so discovery order broke all of them: 6.2% of consecutive pairs were non-adjacent,
+averaging 42 px apart and peaking at 145 px on a 912 grid. Arc length was inflated severalfold — the
+ground-truth arc-chord ratio came out at 3.38, which is physically impossible for a retinal vessel.
+Now 0.00% non-adjacent, and a straight vessel scores exactly 1.0.
 
-Both runs here aggregate by mean and binarise at 0.5, so the tracing fix and the length threshold are
-the only differences.
+**2. Tortuosity is measured only on vessels of at least 50 px.** On a short fragment the chord spans a
+few pixels, so a one-pixel wobble moves the ratio a long way and skeletonisation noise dominates the
+derivative.
 
-Because the segmentation is unchanged, **Dice and the three non-tortuosity features are identical**
-to the pre-fix run — a useful control: if `Fractal_dimension`, `Vessel_density` or `Average_width`
-moved, something other than tortuosity changed.
+**3. Vessel probability is binarised at 0.2, not 0.5.** At 0.5 the ensemble reached sensitivity 0.736
+against specificity 0.995 — missing a quarter of the annotated vessel while inventing almost none,
+which is what a threshold set too high looks like. 0.2 is the Dice optimum over a sweep of the saved
+sigmoid maps.
 
-Section 4 is the before-and-after comparison. The short version: the fix makes the values
-*physiologically correct* and agreement much better, while revealing that correctly-computed
-tortuosity barely varies across these 32 eyes — the pre-fix spread was tracing artefact, not anatomy.
-
-> `Average_width` is in nominal microns: FIVES publishes no pixel size, so the benchmark writes a
-> placeholder 0.008 mm/pixel. Prediction and truth share the same scaling, so every comparison
-> statistic here is unaffected; only the absolute micron value is not physical."""
-
-FIXED_LOAD = """RESULTS = REPO_ROOT / "benchmark" / "results" / "M2_vessels_fixed_mean"
-PRE_FIX = REPO_ROOT / "benchmark" / "results" / "M2_vessels"
-FULL_RESULTS = REPO_ROOT / "benchmark" / "results"
-RUN_LABEL = "M0 + M2 vessel only, gate bypassed, tortuosity fix applied"
-GATE_ENFORCED = False
-
-scores = pd.read_csv(RESULTS / "vessel_scores.csv")
-selection = pd.read_csv(RESULTS / "selection.csv")
-
-paired = pd.read_csv(RESULTS / "features_paired.csv")
-predicted = pd.read_csv(RESULTS / "features_predicted.csv")
-truth = pd.read_csv(RESULTS / "features_ground_truth.csv")
-
-for frame in (predicted, truth):
-    frame[FEATURES] = frame[FEATURES].mask(frame[FEATURES] == -1)
-
-ok = paired[paired["status"] == "ok"]
-order = sorted(ok["disease"].unique())
-truth_all = truth.rename(columns={f: f"{f}_gt" for f in FEATURES})
-
-full_scores_path = FULL_RESULTS / "vessel_scores.csv"
-if full_scores_path.is_file():
-    full_scores = pd.read_csv(full_scores_path)
-    REJECTED_BY_M1 = set(full_scores.loc[full_scores["status"] != "ok", "key"])
-else:
-    REJECTED_BY_M1 = set()
-
-# The pre-fix run, for the before-and-after comparison.
-PRE_FIX_AVAILABLE = (PRE_FIX / "features_paired.csv").is_file()
-if PRE_FIX_AVAILABLE:
-    pre_paired = pd.read_csv(PRE_FIX / "features_paired.csv")
-    pre_ok = pre_paired[pre_paired["status"] == "ok"]
-    pre_truth = pd.read_csv(PRE_FIX / "features_ground_truth.csv")
-    pre_truth_all = pre_truth.rename(columns={f: f"{f}_gt" for f in FEATURES})
-else:
-    print("pre-fix results not found — the comparison section will be skipped")
-
-TORTUOSITY = ["Distance_tortuosity", "Squared_curvature_tortuosity", "Tortuosity_density"]
-UNCHANGED = [f for f in FEATURES if f not in TORTUOSITY]
-
-print(f"{len(selection)} selected, {(scores['status'] == 'ok').sum()} segmented, {len(ok)} paired")
-print(f"pre-fix results available: {PRE_FIX_AVAILABLE}")"""
-
-FIXED_COMPARISON = [
-    (
-        "markdown",
-        """## 4. Before and after the tortuosity fix
-
-The segmentation is byte-identical between the two runs, so anything that moved here is the feature
-formula and nothing else.
-
-**The control first.** `Fractal_dimension`, `Vessel_density` and `Average_width` do not depend on
-vessel tracing, so they must be unchanged. If they are not, something beyond tortuosity moved.""",
-    ),
-    (
-        "code",
-        """if PRE_FIX_AVAILABLE:
-    control = []
-    for feature in UNCHANGED:
-        after = ok.set_index("key")[f"{feature}_pred"]
-        before = pre_ok.set_index("key")[f"{feature}_pred"].reindex(after.index)
-        control.append({"feature": feature, "max_abs_change": (after - before).abs().max()})
-    control = pd.DataFrame(control).set_index("feature")
-    display(control)
-    print("control holds — the non-tortuosity features are untouched"
-          if control["max_abs_change"].max() == 0 else
-          "WARNING: a non-tortuosity feature moved; the change is not confined to tortuosity")""",
-    ),
-    (
-        "markdown",
-        """### Agreement: does the prediction now match the truth better?""",
-    ),
-    (
-        "code",
-        """if PRE_FIX_AVAILABLE:
-    before_agreement = agreement_table(pre_ok, FEATURES)
-    delta = pd.DataFrame(
-        {
-            "ICC_before": before_agreement["ICC21"],
-            "ICC_after": agreement["ICC21"],
-            "ICC_change": agreement["ICC21"] - before_agreement["ICC21"],
-            "MAPE%_before": before_agreement["MAPE_%"],
-            "MAPE%_after": agreement["MAPE_%"],
-            "bias%_before": before_agreement["rel_bias_%"],
-            "bias%_after": agreement["rel_bias_%"],
-        }
-    )
-    display(delta.round(3))""",
-    ),
-    (
-        "code",
-        """if PRE_FIX_AVAILABLE:
-    fig, axes = plt.subplots(1, 2, figsize=(12, 4))
-    position = np.arange(len(TORTUOSITY))
-
-    axes[0].barh(position + 0.2, before_agreement.loc[TORTUOSITY, "ICC21"], height=0.36,
-                 label="before fix", color="#C44E52")
-    axes[0].barh(position - 0.2, agreement.loc[TORTUOSITY, "ICC21"], height=0.36,
-                 label="after fix", color="#55A868")
-    for threshold in (0.5, 0.75, 0.9):
-        axes[0].axvline(threshold, color="grey", ls=":", lw=1)
-    axes[0].set(yticks=position, yticklabels=[t.replace("_", "\\n") for t in TORTUOSITY],
-                xlabel="ICC(2,1)", title="Agreement with ground truth")
-    axes[0].legend(fontsize=8)
-
-    axes[1].barh(position + 0.2, before_agreement.loc[TORTUOSITY, "MAPE_%"], height=0.36,
-                 label="before fix", color="#C44E52")
-    axes[1].barh(position - 0.2, agreement.loc[TORTUOSITY, "MAPE_%"], height=0.36,
-                 label="after fix", color="#55A868")
-    axes[1].set(yticks=position, yticklabels=["" for _ in TORTUOSITY],
-                xlabel="MAPE (%)", title="Per-image error", xscale="log")
-    axes[1].legend(fontsize=8)
-
-    fig.tight_layout()""",
-    ),
-    (
-        "markdown",
-        """### Are the values themselves plausible now?
-
-A distance tortuosity is an arc-to-chord ratio: 1.0 is a straight vessel, and retinal vessels sit
-just above it. A value of 3.4 would mean the vessel wanders more than three times its end-to-end
-distance, which does not happen — it was the inflated arc length.""",
-    ),
-    (
-        "code",
-        """if PRE_FIX_AVAILABLE:
-    rows = []
-    for feature in TORTUOSITY:
-        for label, frame in (("before", pre_truth), ("after", truth)):
-            values = frame[feature].dropna()
-            spread = values.quantile(0.75) - values.quantile(0.25)
-            rows.append(
-                {
-                    "feature": feature,
-                    "fix": label,
-                    "gt_median": values.median(),
-                    "gt_min": values.min(),
-                    "gt_max": values.max(),
-                    "IQR/median": spread / values.median() if values.median() else np.nan,
-                }
-            )
-    display(pd.DataFrame(rows).set_index(["feature", "fix"]).round(4))""",
-    ),
-    (
-        "markdown",
-        """### The catch: the spread was largely artefact
-
-Agreement improved sharply — but the *between-eye spread* collapsed. Correctly computed, these
-measures are nearly the same for every eye in this cohort.
-
-That means the pre-fix "informational strength" was not anatomy. The apparent variation came from
-per-image differences in how badly the tracing jumped, which is noise dressed as signal. A feature
-cannot discriminate between eyes if it takes the same value for all of them, however precisely it
-is measured — so `spread_to_noise` is the number to watch here, not ICC.
-
-The 50-px threshold is not responsible: with ordering fixed, ground-truth `Distance_tortuosity`
-spread is 0.0024 at a 15-px threshold and 0.0039 at 50 px. The collapse is the ordering fix.""",
-    ),
-    (
-        "code",
-        """if PRE_FIX_AVAILABLE:
-    before_combined = discriminability(before_agreement, informational_strength(pre_ok, FEATURES))
-    after_combined = discriminability(agreement, informational_strength(ok, FEATURES))
-    display(
-        pd.DataFrame(
-            {
-                "IQR/med_before": before_combined["gt_IQR_over_median"],
-                "IQR/med_after": after_combined["gt_IQR_over_median"],
-                "spread/noise_before": before_combined["spread_to_noise"],
-                "spread/noise_after": after_combined["spread_to_noise"],
-            }
-        ).round(4)
-    )
-    print("Below 1.0, measurement noise covers the whole interquartile range.")""",
-    ),
-]
-
-
-THRESHOLD_INTRO = """# AutoMorph on FIVES — vessel probability binarised at 0.2
-
-The same 32 images and the same ensemble as `analysis_M2_vessels_fixed.ipynb`, but M2 calls a pixel
-vessel at a **probability of 0.2 instead of 0.5**. Unlike the tortuosity fix, this changes the
-segmentation itself, so *every* number moves — Dice included.
-
-The motivation was a measured asymmetry: at 0.5 the ensemble reached sensitivity 0.736 against
-specificity 0.995. It was missing about a quarter of the annotated vessel while inventing almost
-nothing, which is what a threshold set too high looks like.
-
-Section 4 is the before-and-after. Both runs use the tortuosity fix, a 50 px minimum vessel length and
-mean aggregation, so **the threshold is the only difference** — no confounding.
+Aggregation across vessels remains the **mean**, as the original code had it.
 
 > `Average_width` is in nominal microns: FIVES publishes no pixel size, so the benchmark writes a
 > placeholder 0.008 mm/pixel. Prediction and truth share the same scaling, so every comparison
 > statistic here is unaffected; only the absolute micron value is not physical."""
 
 THRESHOLD_LOAD = """RESULTS = REPO_ROOT / "benchmark" / "results" / "M2_vessels_thr02_mean"
-BASELINE = REPO_ROOT / "benchmark" / "results" / "M2_vessels_fixed_mean"
+BASELINE = REPO_ROOT / "benchmark" / "results" / "M2_vessels"
 FULL_RESULTS = REPO_ROOT / "benchmark" / "results"
-RUN_LABEL = "M0 + M2 vessel only, gate bypassed, tortuosity fix, threshold 0.2"
+RUN_LABEL = "M0 + M2 vessel only, gate bypassed, all fixes applied"
 GATE_ENFORCED = False
 
 scores = pd.read_csv(RESULTS / "vessel_scores.csv")
@@ -1052,21 +855,21 @@ if BASELINE_AVAILABLE:
     base_ok = base_paired[base_paired["status"] == "ok"]
     base_scores = pd.read_csv(BASELINE / "vessel_scores.csv")
 else:
-    print("threshold-0.5 results not found — the comparison section will be skipped")
+    print("pre-fix results not found — the comparison section will be skipped")
 
 SWEEP_PATH = RESULTS / "threshold_sweep.csv"
 
 print(f"{len(selection)} selected, {(scores['status'] == 'ok').sum()} segmented, {len(ok)} paired")
-print(f"threshold-0.5 baseline available: {BASELINE_AVAILABLE}")"""
+print(f"pre-fix baseline available: {BASELINE_AVAILABLE}")"""
 
 THRESHOLD_COMPARISON = [
     (
         "markdown",
-        """## 4. Threshold 0.5 vs 0.2
+        """## 4. Before and after the fixes
 
-This change moves the masks, so unlike the tortuosity fix there is **no control group** — every
-feature is expected to move, and Dice moves too. Both runs share the tortuosity fix and the 50 px
-minimum vessel length.""",
+Against the pre-fix run: original tracing, a 15 px minimum, and binarisation at 0.5. All three
+changes are in play at once, so every number moves — Dice included. There is no control group here,
+unlike a change confined to the feature formulas.""",
     ),
     (
         "code",
@@ -1074,14 +877,14 @@ minimum vessel length.""",
     metric_names = ["dice", "iou", "sensitivity", "specificity"]
     comparison = pd.DataFrame(
         {
-            "at_0.5": base_scores.query("status == 'ok'")[metric_names].mean(),
-            "at_0.2": scores.query("status == 'ok'")[metric_names].mean(),
+            "before": base_scores.query("status == 'ok'")[metric_names].mean(),
+            "after": scores.query("status == 'ok'")[metric_names].mean(),
         }
     )
-    comparison["change"] = comparison["at_0.2"] - comparison["at_0.5"]
+    comparison["change"] = comparison["after"] - comparison["before"]
     display(comparison.round(4))
-    print("Lowering the threshold buys sensitivity and pays in specificity;")
-    print("Dice rises because the sensitivity gain is much larger than the specificity loss.")""",
+    print("The binarisation threshold does most of this: lowering it buys sensitivity and pays in")
+    print("specificity, and Dice rises because the gain is much larger than the loss.")""",
     ),
     (
         "code",
@@ -1089,13 +892,13 @@ minimum vessel length.""",
     base_agreement = agreement_table(base_ok, FEATURES)
     delta = pd.DataFrame(
         {
-            "ICC_at_0.5": base_agreement["ICC21"],
-            "ICC_at_0.2": agreement["ICC21"],
+            "ICC_before": base_agreement["ICC21"],
+            "ICC_after": agreement["ICC21"],
             "ICC_change": agreement["ICC21"] - base_agreement["ICC21"],
-            "bias%_at_0.5": base_agreement["rel_bias_%"],
-            "bias%_at_0.2": agreement["rel_bias_%"],
-            "MAPE%_at_0.5": base_agreement["MAPE_%"],
-            "MAPE%_at_0.2": agreement["MAPE_%"],
+            "bias%_before": base_agreement["rel_bias_%"],
+            "bias%_after": agreement["rel_bias_%"],
+            "MAPE%_before": base_agreement["MAPE_%"],
+            "MAPE%_after": agreement["MAPE_%"],
         }
     )
     display(delta.round(3).sort_values("ICC_change", ascending=False))""",
@@ -1108,9 +911,9 @@ minimum vessel length.""",
     labels = [f.replace("_", " ") for f in FEATURES]
 
     axes[0].barh(position + 0.2, base_agreement.loc[FEATURES, "ICC21"], height=0.36,
-                 label="threshold 0.5", color="#C44E52")
+                 label="before fixes", color="#C44E52")
     axes[0].barh(position - 0.2, agreement.loc[FEATURES, "ICC21"], height=0.36,
-                 label="threshold 0.2", color="#55A868")
+                 label="after fixes", color="#55A868")
     for threshold in (0.5, 0.75, 0.9):
         axes[0].axvline(threshold, color="grey", ls=":", lw=1)
     axes[0].set(yticks=position, yticklabels=labels, xlabel="ICC(2,1)",
@@ -1118,9 +921,9 @@ minimum vessel length.""",
     axes[0].legend(fontsize=8, loc="lower right")
 
     axes[1].barh(position + 0.2, base_agreement.loc[FEATURES, "rel_bias_%"].abs(), height=0.36,
-                 label="threshold 0.5", color="#C44E52")
+                 label="before fixes", color="#C44E52")
     axes[1].barh(position - 0.2, agreement.loc[FEATURES, "rel_bias_%"].abs(), height=0.36,
-                 label="threshold 0.2", color="#55A868")
+                 label="after fixes", color="#55A868")
     axes[1].set(yticks=position, yticklabels=["" for _ in FEATURES], xlabel="|relative bias| (%)",
                 title="Systematic bias")
     axes[1].legend(fontsize=8)
@@ -1154,7 +957,7 @@ choice checkable rather than assumed.""",
     ax.legend(fontsize=8)
     fig.tight_layout()
 else:
-    print("no sweep on disk; see docs/vessel_threshold.md")""",
+    print("no sweep on disk; see docs/fixes.md")""",
     ),
 ]
 
@@ -1181,14 +984,6 @@ PROFILES = {
         load=THRESHOLD_LOAD,
         gate_cells=VESSEL_GATE,
         comparison_cells=THRESHOLD_COMPARISON,
-    ),
-    "fixed": Profile(
-        name="fixed",
-        notebook=REPO_ROOT / "benchmark" / "analysis_M2_vessels_fixed.ipynb",
-        intro=FIXED_INTRO,
-        load=FIXED_LOAD,
-        gate_cells=VESSEL_GATE,
-        comparison_cells=FIXED_COMPARISON,
     ),
 }
 

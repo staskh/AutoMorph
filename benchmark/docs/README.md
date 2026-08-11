@@ -16,13 +16,15 @@ The benchmark answers two questions:
 Wall-clock time per stage is recorded alongside all three, so a device or batch-size change can be
 compared against a previous run.
 
-**Headline results** ([full write-up](results.md)): the M1 quality gate rejected 6 of 32 FIVES
-quality-3 images, 5 of them healthy eyes. Segmentation reaches Dice 0.832 and under-segments
-(sensitivity 0.747, specificity 0.995). Of the six reported features, only `Tortuosity_density`
-clears both agreement and informativeness (ICC 0.81); `Vessel_density` and `Average_width` track the
-truth but sit 20% and 12% low, so ICC rates them 0.50 and 0.35 where Pearson says 0.94 and 0.79; and
-`Squared_curvature_tortuosity` has no detectable relationship with the truth at all (ICC 0.088).
-The features measured most accurately turn out to be the ones with the least spread to measure.
+**Headline results.** The M1 quality gate rejects 6 of 32 FIVES quality-3 images, 5 of them healthy
+eyes, and each rejection is silent and total ([results.md](results.md)) — segmenting them anyway shows
+it discards 19% of the cohort to gain 0.007 Dice ([vessel_results.md](vessel_results.md)).
+
+Benchmarking also found three defects in vessel segmentation and measurement, now fixed
+([fixes.md](fixes.md)). With them in place segmentation reaches **Dice 0.855** (sensitivity 0.852) and
+all six reported features agree with the expert annotations well enough to use — three *reliable*,
+three *usable with care*. Before the fixes one feature was degenerate, two were biased enough to need
+calibration, and one had no detectable relationship with the truth.
 
 ## Documents
 
@@ -34,8 +36,7 @@ The features measured most accurately turn out to be the ones with the least spr
 | [results.md](results.md) | The recorded full run and what it shows |
 | [vessel_run.md](vessel_run.md) | The vessel-only run: all 32 images, no quality gate |
 | [vessel_results.md](vessel_results.md) | What the vessel-only run shows |
-| [tortuosity_fix.md](tortuosity_fix.md) | A tracing bug in `detect_vessel_border`, and what fixing it changed |
-| [vessel_threshold.md](vessel_threshold.md) | Binarising at 0.2 instead of 0.5 — the largest single improvement measured |
+| [fixes.md](fixes.md) | Three defects the benchmark found, and what fixing them changed |
 
 ## Two runs
 
@@ -43,7 +44,7 @@ The features measured most accurately turn out to be the ones with the least spr
 | --- | --- | --- |
 | Stages | All 13 | M0 + M2 vessel |
 | Quality gate | Enforced — drops 6 of 32 | Bypassed — all 32 segmented |
-| Time (CPU) | ~6 h | ~2 h |
+| Time (CPU) | ~6 h | ~25 min |
 | Answers | What the pipeline does end to end | How good segmentation is on *every* image |
 
 They write to separate roots and separate output directories, and are meant to be read together:
@@ -57,16 +58,17 @@ uv run python -m benchmark.run                    # full pipeline + scores      
 uv run python -m benchmark.ground_truth_features  # measure the annotations         (~1 min)
 uv run python -m benchmark.build_notebook --run   # regenerate the analysis         (~1 min)
 
-uv run python -m benchmark.run_vessel             # vessel only, all 32 images      (~20 min on CPU)
-uv run python -m benchmark.build_notebook --profile vessel --run
+uv run python -m benchmark.run_vessel             # vessel only, all 32 images      (~25 min on CPU)
+uv run python -m benchmark.build_notebook --profile threshold --run
 ```
 
 The first stages the subset, runs every module pinned to the CPU, scores the output and writes
 everything under `benchmark/results/`. The next two add the feature comparison; they need the first
 to have run, and both are cheap to repeat.
 
-The last is independent — its own run root, its own output under `benchmark/results/M2_vessels/` —
-and computes Dice plus both feature sets in one go.
+The last is independent — its own run root, its own output under
+`benchmark/results/M2_vessels_thr02_mean/` — and computes Dice plus both feature sets in one go. Its
+notebook compares against the frozen pre-fix baseline in `benchmark/results/M2_vessels/`.
 
 ## Layout
 
@@ -82,8 +84,7 @@ benchmark/
   build_notebook.py        generate both notebooks (edit here, not the .ipynb)
   analysis.ipynb           full-run analysis, with plots
   analysis_M2_vessels.ipynb  vessel-only analysis, incl. grading the quality gate
-  analysis_M2_vessels_fixed.ipynb  the same after the tortuosity fix, with a before/after section
-  analysis_M2_vessels_thr02.ipynb  the same at binarisation threshold 0.2, with a sweep
+  analysis_M2_vessels_thr02.ipynb  the same with all fixes applied, plus a before/after section
 
   fetch_fives.py           download and build the FIVES store
   datasets/fives.py        FIVES archive layout, quality labels, store schema

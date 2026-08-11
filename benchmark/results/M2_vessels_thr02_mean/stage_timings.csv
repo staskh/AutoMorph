@@ -1,0 +1,3 @@
+stage,status,attempts,returncode,seconds,log
+M0 preprocess,ok,1,0,7.9,benchmark/results/M2_vessels_thr02_mean/logs/M0_preprocess.log
+M2 vessel segmentation,ok,1,0,1498.7,benchmark/results/M2_vessels_thr02_mean/logs/M2_vessel_segmentation.log
